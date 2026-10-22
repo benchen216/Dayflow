@@ -19,6 +19,11 @@ struct MainView: View {
   @Environment(\.dayflowTheme) var theme
   @Environment(\.stylePreviewAfter) var stylePreviewAfter
   @State var selectedIcon: SidebarIcon = .timeline
+  // Flow's web view outlives a switch to another tab by `flowKeepAlive`, so a
+  // quick look at the timeline doesn't reload Flow or cut off a voice call.
+  @State var flowAlive = false
+  @State var flowTeardown: Task<Void, Never>?
+  static let flowKeepAlive: Duration = .seconds(5 * 60)
   @State var selectedDate = timelineDisplayDate(from: Date())
   @State var cachedTimelineWeekRange: TimelineWeekRange = TimelineWeekRange.containing(
     timelineDisplayDate(from: Date()))
