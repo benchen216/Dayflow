@@ -29691,6 +29691,9 @@
         }
       }
     },
+    "Flow is limited for now" : {
+
+    },
     "Flow is unlocked on this Mac and attached to your Dayflow account." : {
 
     },
@@ -29746,6 +29749,9 @@
           }
         }
       }
+    },
+    "Flow watches your screen during a session to keep you on track, and that takes a level of intelligence Gemini and local models can't reach yet. Switch your provider to Claude, ChatGPT or Dayflow Pro in Settings to use Flow now, or sign up and we'll tell you when it works with yours." : {
+
     },
     "Flow: Nudge Style — %@" : {
       "localizations" : {
@@ -30390,6 +30396,9 @@
           }
         }
       }
+    },
+    "For Claude, ChatGPT and Dayflow Pro users" : {
+
     },
     "For experienced users" : {
       "localizations" : {
