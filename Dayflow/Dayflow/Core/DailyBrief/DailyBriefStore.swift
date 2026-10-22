@@ -146,6 +146,11 @@ final class DailyBriefStore: ObservableObject {
     briefDirectory(for: day).appendingPathComponent("brief.json")
   }
 
+  /// The last run's full Claude transcript for that day, readable text.
+  nonisolated static func transcriptURL(for day: String) -> URL {
+    briefDirectory(for: day).appendingPathComponent("transcript.txt")
+  }
+
   nonisolated static func savedDirectory() -> URL {
     rootDirectory().appendingPathComponent("saved", isDirectory: true)
   }
