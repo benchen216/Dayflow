@@ -387,6 +387,8 @@ extension MainView {
       DailyBriefOverlay()
         .padding(.leading, 80)
         .padding([.top, .trailing, .bottom], 15)
+        // Match the main panel, which also ignores the title bar inset.
+        .ignoresSafeArea()
         .transition(.opacity)
         .zIndex(20)
     }
