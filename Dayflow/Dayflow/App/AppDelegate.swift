@@ -190,6 +190,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Flow desktop overlay (creature toasts/nudges) tracks the session mirror
     FlowOverlayController.shared.start()
     FlowEarlyBirdController.shared.start()
+    DailyBriefMenuBarNotice.shared.start()
 
     // Observe recording state
     analyticsSub = AppState.shared.$isRecording
