@@ -460,6 +460,14 @@ private struct DailyBriefDebugStats: View {
     isFailed ? store.lastFailedRunStats : store.brief?.stats
   }
 
+  /// The last run's saved Claude transcript, when there is one. Runs are always
+  /// for today, so a failed retry's transcript lives in the same folder.
+  private var transcriptURL: URL? {
+    let day = store.brief?.day ?? Date().getDayInfoFor4AMBoundary().dayString
+    let url = DailyBriefStore.transcriptURL(for: day)
+    return FileManager.default.fileExists(atPath: url.path) ? url : nil
+  }
+
   /// Only meaningful when the stats belong to the brief on screen.
   private var generatedAt: Date? {
     isFailed ? nil : store.brief?.generatedAt
@@ -478,8 +486,15 @@ private struct DailyBriefDebugStats: View {
           statLine(line)
         }
 
-        Button("Copy stats") {
-          Self.copyJSON(stats, generatedAt: generatedAt)
+        HStack(spacing: 14) {
+          Button("Copy stats") {
+            Self.copyJSON(stats, generatedAt: generatedAt)
+          }
+          if let transcriptURL {
+            Button("Read transcript") {
+              NSWorkspace.shared.open(transcriptURL)
+            }
+          }
         }
         .buttonStyle(.plain)
         .font(.system(size: 10, weight: .medium, design: .monospaced))
