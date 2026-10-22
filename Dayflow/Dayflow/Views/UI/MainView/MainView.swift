@@ -42,6 +42,7 @@ struct MainView: View {
   @State var refreshActivitiesTrigger: Int = 0
   @ObservedObject var inactivity = InactivityMonitor.shared
   @ObservedObject var pauseManager = PauseManager.shared
+  @ObservedObject var dailyBrief = DailyBriefStore.shared
 
   // Animation states for orchestrated entrance - Emil Kowalski principles
   @State var logoScale: CGFloat = 0.8
