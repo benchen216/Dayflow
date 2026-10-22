@@ -1080,7 +1080,9 @@ struct ChatCLIProcessRunner {
       cmdParts.append("--allowedTools")
       cmdParts.append(LoginShellRunner.shellEscape("[]"))
     }
-    cmdParts.append("--strict-mcp-config")
+    if profile?.loadsUserMCPServers != true {
+      cmdParts.append("--strict-mcp-config")
+    }
     cmdParts.append("--")
     if profile == nil {
       cmdParts.append(
