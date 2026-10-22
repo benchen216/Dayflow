@@ -1237,7 +1237,7 @@ struct ChatCLIProcessRunner {
 
   /// Extracts intact top-level JSON values from unrelated login-shell stdout. The scanner only
   /// identifies byte ranges and never rewrites strings inside Claude's result envelope.
-  private func balancedJSONValues(in output: String) -> [String] {
+  func balancedJSONValues(in output: String) -> [String] {
     let bytes = Array(output.utf8)
     var values: [String] = []
     var start = 0
