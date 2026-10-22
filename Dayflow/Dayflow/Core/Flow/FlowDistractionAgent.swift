@@ -195,6 +195,15 @@ final class FlowDistractionAgent: ObservableObject {
   /// Number of re-briefs this session, so a broken Codex install can't loop.
   private var rebriefs = 0
   private var timeline: FlowSessionTimeline { FlowSessionTimeline.shared }
+
+  /// Whether the primary provider can run the agent. Flow is closed to
+  /// everyone else for now, since nothing would watch their sessions.
+  static var providerCanWatch: Bool {
+    #if DEBUG
+      if UserDefaults.standard.bool(forKey: "flowForceProviderGate") { return false }
+    #endif
+    return Engine.current() != nil
+  }
   /// Debug panel: make the next tick ask for a timeline update.
   private var forceTimelineUpdate = false
 
