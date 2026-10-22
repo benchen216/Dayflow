@@ -15,7 +15,7 @@
 //
 //  Commands: ready, getToken, state, simulateDistraction, getTimeline,
 //            getWeeklyFocus, getPlan, startCheckout, startTrial,
-//            openExternal, openSupport, microphoneAccess,
+//            setEarlyBirdAlerts, openExternal, openSupport, microphoneAccess,
 //            openMicrophoneSettings.
 //  Events:   nativeState, overlayAction, supportUnread.
 //
@@ -305,6 +305,15 @@ struct FlowWebView: NSViewRepresentable {
         }
         reply(id: id, payload: ["shown": FlowSessionMirror.shared.overlay.isDemo])
 
+      case "setEarlyBirdAlerts":
+        // The "Schedule alerts" switch in Flow's settings.
+        if let on = payload["on"] as? Bool {
+          FlowEarlyBirdController.shared.isEnabled = on
+          reply(id: id, payload: [:])
+        } else {
+          reply(id: id, error: "invalid payload")
+        }
+
       case "openExternal":
         if let urlString = payload["url"] as? String, let url = URL(string: urlString),
           url.scheme == "https" || url.scheme == "http"
@@ -358,7 +367,8 @@ struct FlowWebView: NSViewRepresentable {
         "appVersion": Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "",
       ]
       // Commands newer than the first bridge, so the page knows what it can ask for.
-      payload["capabilities"] = ["dayTimeline", "supportChat", "microphone"]
+      payload["capabilities"] = ["dayTimeline", "supportChat", "microphone", "earlyBirdAlerts"]
+      payload["earlyBirdAlerts"] = FlowEarlyBirdController.shared.isEnabled
       payload["supportUnread"] = SupportChatSession.flowSupportUnreadCount
       payload["token"] = DayflowAuthManager.storedSessionToken()
       payload["backendURL"] = DayflowBackendConfiguration.endpoint()
