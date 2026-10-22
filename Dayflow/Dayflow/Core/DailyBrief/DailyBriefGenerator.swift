@@ -142,6 +142,7 @@ enum DailyBriefGenerator {
       options: options,
       workingDirectory: runDirectory,
       timeoutSeconds: runTimeoutSeconds,
+      transcriptURL: DailyBriefStore.transcriptURL(for: input.day),
       tooLongMessage:
         "Claude took longer than 20 minutes on your brief, so Dayflow stopped it. Try again."
     )
@@ -621,6 +622,7 @@ enum DailyBriefGenerator {
     options: ClaudeCLIStructuredOutputOptions,
     workingDirectory: URL,
     timeoutSeconds: TimeInterval,
+    transcriptURL: URL? = nil,
     tooLongMessage: String
   ) throws -> StructuredClaudeResult {
     let runner = ChatCLIProcessRunner()
@@ -641,6 +643,9 @@ enum DailyBriefGenerator {
     }
 
     let events = outputEvents(in: run.rawStdout, runner: runner)
+    if let transcriptURL {
+      writeTranscript(prompt: prompt, events: events, run: run, to: transcriptURL)
+    }
     let envelope = events.last { $0["type"] as? String == "result" }
     let isError = (envelope?["is_error"] as? Bool) == true
     let subtype = envelope?["subtype"] as? String ?? ""
@@ -696,6 +701,105 @@ enum DailyBriefGenerator {
       }
     }
     return []
+  }
+
+  // MARK: - Transcript
+
+  /// Saves the whole run as readable text (prompt, every message, tool call, and
+  /// tool result, then the final result) for the footer's Transcript button.
+  /// Written for failed runs too, since those are the ones worth reading.
+  private static func writeTranscript(
+    prompt: String, events: [[String: Any]], run: ChatCLIRunResult, to url: URL
+  ) {
+    var sections: [String] = ["# Prompt\n\n" + prompt]
+
+    if events.isEmpty {
+      // No parseable events, so show what the CLI printed instead.
+      sections.append("# Raw output\n\n" + run.rawStdout)
+    }
+
+    for event in events {
+      switch event["type"] as? String {
+      case "system":
+        var lines = ["# Session started"]
+        if let model = event["model"] as? String { lines.append("model: \(model)") }
+        if let tools = event["tools"] as? [String] {
+          lines.append("tools: " + tools.joined(separator: ", "))
+        }
+        if let servers = event["mcp_servers"] as? [[String: Any]] {
+          let names = servers.map { "\($0["name"] ?? "?") (\($0["status"] ?? "?"))" }
+          lines.append("connectors: " + names.joined(separator: ", "))
+        }
+        sections.append(lines.joined(separator: "\n"))
+
+      case "assistant":
+        let message = event["message"] as? [String: Any]
+        for block in message?["content"] as? [[String: Any]] ?? [] {
+          switch block["type"] as? String {
+          case "text":
+            sections.append("## Claude\n\n" + (block["text"] as? String ?? ""))
+          case "thinking":
+            sections.append("## Claude (thinking)\n\n" + (block["thinking"] as? String ?? ""))
+          case "tool_use":
+            let name = block["name"] as? String ?? "?"
+            sections.append("## Tool call: \(name)\n\n" + prettyJSON(block["input"] ?? [:]))
+          default:
+            continue
+          }
+        }
+
+      case "user":
+        let message = event["message"] as? [String: Any]
+        for block in message?["content"] as? [[String: Any]] ?? [] {
+          guard block["type"] as? String == "tool_result" else { continue }
+          let heading = (block["is_error"] as? Bool) == true ? "## Tool error" : "## Tool result"
+          sections.append(heading + "\n\n" + toolResultText(block["content"]))
+        }
+
+      case "result":
+        var lines = ["# Result"]
+        if let subtype = event["subtype"] as? String { lines.append("subtype: \(subtype)") }
+        if let structured = event["structured_output"] {
+          lines.append("\n" + prettyJSON(structured))
+        } else if let text = event["result"] as? String {
+          lines.append("\n" + text)
+        }
+        sections.append(lines.joined(separator: "\n"))
+
+      default:
+        continue
+      }
+    }
+
+    let stderr = run.stderr.trimmingCharacters(in: .whitespacesAndNewlines)
+    if !stderr.isEmpty {
+      sections.append("# stderr\n\n" + stderr)
+    }
+
+    let text = sections.joined(separator: "\n\n---\n\n") + "\n"
+    try? FileManager.default.createDirectory(
+      at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+    try? text.write(to: url, atomically: true, encoding: .utf8)
+  }
+
+  /// Tool results are either a string or a list of content blocks.
+  private static func toolResultText(_ content: Any?) -> String {
+    if let text = content as? String { return text }
+    let blocks = content as? [[String: Any]] ?? []
+    return blocks.map { block in
+      if let text = block["text"] as? String { return text }
+      return "[\(block["type"] as? String ?? "unknown") block]"
+    }
+    .joined(separator: "\n")
+  }
+
+  private static func prettyJSON(_ value: Any) -> String {
+    guard JSONSerialization.isValidJSONObject(value),
+      let data = try? JSONSerialization.data(
+        withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]),
+      let string = String(data: data, encoding: .utf8)
+    else { return String(describing: value) }
+    return string
   }
 
   /// Cost, tokens, turns, model, and tool-call counts from the result envelope and
