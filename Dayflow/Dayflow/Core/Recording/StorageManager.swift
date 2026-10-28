@@ -675,6 +675,29 @@ final class StorageManager: StorageManaging, @unchecked Sendable {
               ON chat_messages(conversation_id, sort_order);
           """)
 
+      // Screen Time from the user's iPhone/iPad, imported from Biome
+      try db.execute(
+        sql: """
+              CREATE TABLE IF NOT EXISTS device_usage_devices (
+                  device_id TEXT NOT NULL PRIMARY KEY,
+                  model TEXT,
+                  last_event_ts INTEGER,
+                  imported_at INTEGER NOT NULL,
+                  source_signature TEXT
+              );
+
+              CREATE TABLE IF NOT EXISTS device_app_sessions (
+                  id INTEGER PRIMARY KEY AUTOINCREMENT,
+                  device_id TEXT NOT NULL,
+                  bundle_id TEXT NOT NULL,
+                  start_ts INTEGER NOT NULL,
+                  end_ts INTEGER NOT NULL,
+                  UNIQUE(device_id, start_ts)
+              );
+              CREATE INDEX IF NOT EXISTS idx_device_app_sessions_start
+              ON device_app_sessions(start_ts);
+          """)
+
       // Migration: Add soft delete column to timeline_cards if it doesn't exist
       let timelineCardsColumns = try db.columns(in: "timeline_cards").map { $0.name }
       if !timelineCardsColumns.contains("is_deleted") {

@@ -92,6 +92,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // Agent access: accept CLI/MCP writes if the user enabled edits, and fix
     // any MCP client config whose recorded path went stale (app was moved).
     AgentBridgeServer.shared.startIfEnabled()
+    DeviceUsageSyncService.shared.startIfEnabled()
     AgentClientRegistration.repairStaleRegistrations()
 
     // Start heartbeat for DAU tracking

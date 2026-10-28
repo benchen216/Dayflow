@@ -47,6 +47,15 @@ private struct CanvasPositionedActivity: Identifiable {
   let batchIds: [Int64]
 }
 
+// A stretch of iPhone/iPad use, drawn as a thin bar between the hour labels
+// and the cards.
+private struct CanvasPhoneUsageBlock: Identifiable {
+  let id: String
+  let yPosition: CGFloat
+  let height: CGFloat
+  let tooltip: String
+}
+
 struct CanvasTimelineDataView: View {
   @Binding var selectedDate: Date
   @Binding var selectedActivity: TimelineActivity?
@@ -75,6 +84,7 @@ struct CanvasTimelineDataView: View {
   @Environment(\.dayflowTheme) private var theme
   @State private var selectedCardId: String? = nil
   @State private var positionedActivities: [CanvasPositionedActivity] = []
+  @State private var phoneUsageBlocks: [CanvasPhoneUsageBlock] = []
   @State private var recordingProjection: TimelineRecordingProjectionWindow?
   @State private var cardsLayerFrame: CGRect = .zero
   @State private var refreshTimer: Timer?
@@ -151,6 +161,11 @@ struct CanvasTimelineDataView: View {
         NotificationCenter.default.publisher(for: NSApplication.didBecomeActiveNotification)
       ) { _ in
         handleDayTimelineDidBecomeActive()
+      }
+      .onReceive(
+        NotificationCenter.default.publisher(for: .deviceUsageDataUpdated)
+      ) { _ in
+        loadActivities(animate: false, deferWhileHovering: true)
       }
       .onPreferenceChange(TimelineCardsLayerFramePreferenceKey.self) { frame in
         // Preference callbacks fire mid-layout; writing state that feeds the
@@ -425,6 +440,67 @@ struct CanvasTimelineDataView: View {
       timeColumn
       cardsLayer
     }
+    .overlay(alignment: .topLeading) {
+      phoneUsageLane
+        .offset(x: CanvasConfig.timeColumnWidth - PhoneLane.width - PhoneLane.cardGap)
+    }
+  }
+
+  private enum PhoneLane {
+    static let width: CGFloat = 4
+    static let cardGap: CGFloat = 2
+    static let hitSlop: CGFloat = 4
+    static let color = Color(hex: "5B8DEF")
+  }
+
+  private var phoneUsageLane: some View {
+    ZStack(alignment: .topLeading) {
+      ForEach(phoneUsageBlocks) { block in
+        Capsule()
+          .fill(PhoneLane.color.opacity(0.75))
+          .frame(width: PhoneLane.width, height: block.height)
+          .padding(.horizontal, PhoneLane.hitSlop)
+          .contentShape(Rectangle())
+          .help(block.tooltip)
+          .offset(x: -PhoneLane.hitSlop, y: block.yPosition)
+      }
+    }
+    .frame(width: PhoneLane.width, height: timelineHeight, alignment: .topLeading)
+    .allowsHitTesting(!phoneUsageBlocks.isEmpty)
+    .accessibilityHidden(phoneUsageBlocks.isEmpty)
+  }
+
+  /// Phone blocks for the loaded day, positioned on the canvas. Empty when the
+  /// import is off, so the lane costs nothing for users who never enable it.
+  nonisolated private static func phoneUsageBlocks(
+    timelineDate: Date,
+    position: (Date) -> CGFloat,
+    pixelsPerMinute: CGFloat
+  ) -> [CanvasPhoneUsageBlock] {
+    guard DeviceUsagePreferences.isEnabled else { return [] }
+    let dayInfo = timelineDate.getDayInfoFor4AMBoundary()
+    let sessions = StorageManager.shared.fetchDeviceAppSessions(
+      from: dayInfo.startOfDay, to: dayInfo.endOfDay)
+    let blocks = DeviceUsageSummaryBuilder.blocks(
+      sessions: sessions, dayStart: dayInfo.startOfDay, dayEnd: dayInfo.endOfDay)
+
+    let timeFormatter = DateFormatter()
+    timeFormatter.timeStyle = .short
+    timeFormatter.dateStyle = .none
+
+    return blocks.map { block in
+      let apps = block.apps.prefix(3).map {
+        "\($0.displayName) \(LocalizedDuration.string($0.duration))"
+      }.joined(separator: ", ")
+      let range =
+        "\(timeFormatter.string(from: block.start))–\(timeFormatter.string(from: block.end))"
+      return CanvasPhoneUsageBlock(
+        id: block.id,
+        yPosition: position(block.start),
+        height: max(3, CGFloat(block.duration / 60) * pixelsPerMinute),
+        tooltip: String(localized: "Phone \(range): \(apps)")
+      )
+    }
   }
 
   @ViewBuilder
@@ -665,6 +741,12 @@ struct CanvasTimelineDataView: View {
         now: Date()
       )
 
+      let phoneBlocks = Self.phoneUsageBlocks(
+        timelineDate: payload.timelineDate,
+        position: { self.calculateYPosition(for: $0) },
+        pixelsPerMinute: self.pixelsPerMinute
+      )
+
       let positioned = segments.map { seg -> CanvasPositionedActivity in
         let y = self.calculateYPosition(for: seg.start)
         // Card spacing: -2 total (1px top + 1px bottom)
@@ -721,6 +803,7 @@ struct CanvasTimelineDataView: View {
           self.cardEntranceProgress = [:]
         }
         self.positionedActivities = positioned
+        self.phoneUsageBlocks = phoneBlocks
         self.recordingProjection = recordingProjection
         self.hasAnyActivities = !positioned.isEmpty
         if let selectedActivity,
