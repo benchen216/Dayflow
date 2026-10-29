@@ -63,10 +63,8 @@ actor VideoProcessingService {
     return f
   }()
   init() {
-    // Create a persistent directory for timelapses within Application Support
-    let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    self.persistentTimelapsesRootURL = appSupportURL.appendingPathComponent(
-      "\(AppDataDirectory.name)/timelapses", isDirectory: true)
+    // Persistent directory for timelapses (Application Support unless the user chose another folder)
+    self.persistentTimelapsesRootURL = StorageLocation.directory("timelapses")
     // Ensure the root timelapses directory exists
     do {
       try fileManager.createDirectory(

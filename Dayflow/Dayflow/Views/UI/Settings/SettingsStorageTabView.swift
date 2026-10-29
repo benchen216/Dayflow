@@ -7,6 +7,7 @@ struct SettingsStorageTabView: View {
     VStack(alignment: .leading, spacing: SettingsStyle.sectionSpacing) {
       recordingStatusSection
       recordingQualitySection
+      storageLocationSection
       diskUsageSection
     }
     .alert(isPresented: $viewModel.showLimitConfirmation) {
@@ -162,6 +163,70 @@ struct SettingsStorageTabView: View {
     .menuIndicator(.hidden)
     .fixedSize()
     .pointingHandCursor()
+  }
+
+  // MARK: - Storage location
+
+  private var storageLocationSection: some View {
+    SettingsSection(
+      title: String(localized: "storage.location.title", defaultValue: "Storage location"),
+      subtitle: String(
+        localized: "storage.location.subtitle",
+        defaultValue:
+          "Where recordings, timelapses and voice notes are saved, for example a folder on a NAS. The database stays on this Mac.")
+    ) {
+      VStack(alignment: .leading, spacing: 12) {
+        HStack(alignment: .center, spacing: 16) {
+          Text(
+            viewModel.customStoragePath
+              ?? String(
+                localized: "storage.location.default",
+                defaultValue: "Default (Application Support)")
+          )
+          .font(.custom("Figtree", size: 13))
+          .foregroundColor(SettingsStyle.text)
+          .lineLimit(2)
+          .truncationMode(.middle)
+          .textSelection(.enabled)
+          Spacer(minLength: 12)
+          HStack(spacing: 8) {
+            SettingsSecondaryButton(
+              title: String(localized: "storage.location.choose", defaultValue: "Choose folder…"),
+              action: viewModel.chooseStorageFolder)
+            if viewModel.customStoragePath != nil {
+              SettingsSecondaryButton(
+                title: String(localized: "storage.location.reset", defaultValue: "Use default"),
+                action: viewModel.resetStorageFolder)
+            }
+          }
+        }
+
+        if let error = viewModel.storageLocationError {
+          storageNote(error)
+        }
+        if viewModel.isStorageLocationUnavailable {
+          storageNote(
+            String(
+              localized: "storage.location.unavailable",
+              defaultValue:
+                "That folder isn't available right now, so new files go to the default location."))
+        } else if viewModel.storageLocationNeedsRestart {
+          storageNote(
+            String(
+              localized: "storage.location.restart",
+              defaultValue:
+                "Restart Dayflow to use the new location. Recordings already saved stay where they are."
+            ))
+        }
+      }
+    }
+  }
+
+  private func storageNote(_ text: String) -> some View {
+    Text(text)
+      .font(.custom("Figtree", size: 12))
+      .foregroundColor(SettingsStyle.meta)
+      .fixedSize(horizontal: false, vertical: true)
   }
 
   // MARK: - Disk usage

@@ -8,9 +8,7 @@ final class TimelapseStorageManager {
   private let queue = DispatchQueue(label: "com.dayflow.timelapse.purge", qos: .utility)
 
   private init() {
-    let appSupport = fileMgr.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    let path = appSupport.appendingPathComponent("\(AppDataDirectory.name)/timelapses", isDirectory: true)
-    root = path
+    root = StorageLocation.directory("timelapses")
     try? fileMgr.createDirectory(at: root, withIntermediateDirectories: true)
   }
 

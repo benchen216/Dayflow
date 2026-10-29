@@ -432,4 +432,85 @@ final class VoiceNotesTests: XCTestCase {
     let saved = tracker.update(text: "second sentence here", start: 0.1, end: 1.2)
     XCTAssertEqual(saved?.text, "first sentence here")
   }
+
+  // MARK: - Storage location
+
+  private func makeStorageTestFolder() throws -> URL {
+    let url = FileManager.default.temporaryDirectory
+      .appendingPathComponent("storage-location-\(UUID().uuidString)", isDirectory: true)
+    try FileManager.default.createDirectory(at: url, withIntermediateDirectories: true)
+    addTeardownBlock { try? FileManager.default.removeItem(at: url) }
+    return url
+  }
+
+  func testStorageLocationAcceptsWritableFolder() throws {
+    let folder = try makeStorageTestFolder()
+    XCTAssertTrue(StorageLocation.isUsable(folder))
+    XCTAssertNoThrow(try StorageLocation.validate(folder))
+    // The write probe must not be left behind.
+    XCTAssertEqual(try FileManager.default.contentsOfDirectory(atPath: folder.path), [])
+  }
+
+  func testStorageLocationRejectsMissingFolderAndFile() throws {
+    let folder = try makeStorageTestFolder()
+    let missing = folder.appendingPathComponent("not-there", isDirectory: true)
+    XCTAssertFalse(StorageLocation.isUsable(missing))
+    XCTAssertThrowsError(try StorageLocation.validate(missing))
+
+    let file = folder.appendingPathComponent("a.txt")
+    try Data("x".utf8).write(to: file)
+    XCTAssertFalse(StorageLocation.isUsable(file))
+  }
+
+  func testStorageLocationRejectsReadOnlyFolder() throws {
+    let folder = try makeStorageTestFolder()
+    try FileManager.default.setAttributes([.posixPermissions: 0o555], ofItemAtPath: folder.path)
+    addTeardownBlock {
+      try? FileManager.default.setAttributes(
+        [.posixPermissions: 0o755], ofItemAtPath: folder.path)
+    }
+    XCTAssertThrowsError(try StorageLocation.validate(folder))
+  }
+
+  func testMovingNotesKeepsAnythingThatCannotMove() throws {
+    let source = try makeStorageTestFolder()
+    let destination = try makeStorageTestFolder().appendingPathComponent("voice_notes")
+    let moved = UUID().uuidString
+    let clash = UUID().uuidString
+    for name in [moved, clash] {
+      try FileManager.default.createDirectory(
+        at: source.appendingPathComponent(name), withIntermediateDirectories: true)
+      try Data("src".utf8).write(to: source.appendingPathComponent(name).appendingPathComponent("note.json"))
+    }
+    // A note with the same id is already at the destination.
+    try FileManager.default.createDirectory(
+      at: destination.appendingPathComponent(clash), withIntermediateDirectories: true)
+    try Data("dst".utf8).write(
+      to: destination.appendingPathComponent(clash).appendingPathComponent("note.json"))
+
+    VoiceNoteStore.moveNotes(from: [source], into: destination)
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent(moved).path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: source.appendingPathComponent(moved).path))
+    // The clashing note stays in the source and the destination copy is untouched.
+    XCTAssertTrue(FileManager.default.fileExists(atPath: source.appendingPathComponent(clash).path))
+    let kept = try String(
+      contentsOf: destination.appendingPathComponent(clash).appendingPathComponent("note.json"),
+      encoding: .utf8)
+    XCTAssertEqual(kept, "dst")
+    XCTAssertTrue(FileManager.default.fileExists(atPath: source.path))
+  }
+
+  func testMovingNotesRemovesEmptiedSource() throws {
+    let source = try makeStorageTestFolder().appendingPathComponent("old", isDirectory: true)
+    let destination = try makeStorageTestFolder().appendingPathComponent("voice_notes")
+    let id = UUID().uuidString
+    try FileManager.default.createDirectory(
+      at: source.appendingPathComponent(id), withIntermediateDirectories: true)
+
+    VoiceNoteStore.moveNotes(from: [source], into: destination)
+
+    XCTAssertTrue(FileManager.default.fileExists(atPath: destination.appendingPathComponent(id).path))
+    XCTAssertFalse(FileManager.default.fileExists(atPath: source.path))
+  }
 }

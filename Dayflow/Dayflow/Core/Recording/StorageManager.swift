@@ -203,7 +203,8 @@ final class StorageManager: StorageManaging, @unchecked Sendable {
 
     let appSupport = fileMgr.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     let baseDir = appSupport.appendingPathComponent(AppDataDirectory.name, isDirectory: true)
-    let recordingsDir = baseDir.appendingPathComponent("recordings", isDirectory: true)
+    // Media can live elsewhere (see StorageLocation); the database and backups stay in baseDir.
+    let recordingsDir = StorageLocation.directory("recordings")
     let backupDir = baseDir.appendingPathComponent("backups", isDirectory: true)
 
     // Ensure directories exist before opening database

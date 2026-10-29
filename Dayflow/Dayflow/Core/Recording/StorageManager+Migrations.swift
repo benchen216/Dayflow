@@ -22,7 +22,9 @@ extension StorageManager {
 
     let legacyRecordings = normalizedPrefix(
       legacyBase.appendingPathComponent("recordings", isDirectory: true).path)
-    let newRecordings = normalizedPrefix(root.path)
+    // Legacy files were moved into the default folders, wherever new media goes now.
+    let newRecordings = normalizedPrefix(
+      newBase.appendingPathComponent("recordings", isDirectory: true).path)
 
     let legacyTimelapses = normalizedPrefix(
       legacyBase.appendingPathComponent("timelapses", isDirectory: true).path)
