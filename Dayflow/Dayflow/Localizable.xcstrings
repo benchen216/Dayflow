@@ -876,6 +876,370 @@
         }
       }
     },
+    "storage.archive.off" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Aus. Die ältesten Dateien werden am Limit gelöscht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Off. The oldest files are deleted at the limit."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Désactivée. Les plus anciens fichiers sont supprimés à la limite."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オフ。上限に達すると最も古いファイルは削除されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "꺼짐. 한도에 도달하면 가장 오래된 파일이 삭제됩니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Выключен. При достижении лимита самые старые файлы удаляются."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已关闭。达到上限时会删除最旧的文件。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "已關閉。達到上限時會刪除最舊的檔案。"
+          }
+        }
+      }
+    },
+    "storage.archive.overlap" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Das Archiv darf nicht der Speicherordner sein oder darin liegen. Wähle einen anderen Ordner."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The archive can't be the storage folder or inside it. Pick a different folder."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "L'archive ne peut pas être le dossier de stockage ni se trouver dedans. Choisissez un autre dossier."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アーカイブは保存先フォルダそのものやその中には置けません。別のフォルダを選んでください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보관 폴더는 저장 폴더이거나 그 안에 있을 수 없습니다. 다른 폴더를 선택하세요."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Архив не может быть папкой хранения или находиться внутри неё. Выберите другую папку."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "归档不能是存储文件夹，也不能位于其中。请选择其他文件夹。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "歸檔不能是儲存資料夾，也不能位於其中。請選擇其他資料夾。"
+          }
+        }
+      }
+    },
+    "storage.archive.panelMessage" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wähle, wohin Dayflow alte Aufnahmen und Zeitraffer verschiebt"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Choose where Dayflow moves old recordings and timelapses"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Choisissez où Dayflow déplace les anciens enregistrements et accélérés"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dayflow が古い録画とタイムラプスを移動する場所を選択してください"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dayflow가 오래된 녹화와 타임랩스를 옮길 위치를 선택하세요"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Выберите, куда Dayflow будет переносить старые записи и таймлапсы"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "选择 Dayflow 存放旧录制和延时视频的位置"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "選擇 Dayflow 存放舊錄影和縮時影片的位置"
+          }
+        }
+      }
+    },
+    "storage.archive.subtitle" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Wenn die Limits unten erreicht sind, verschiebt Dayflow die ältesten Aufnahmen und Zeitraffer hierher statt sie zu löschen, zum Beispiel auf ein NAS. Sie lassen sich weiter abspielen, solange dieser Ordner erreichbar ist. Ohne Archiv werden die ältesten Dateien gelöscht."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "When the limits below are reached, Dayflow moves the oldest recordings and timelapses here instead of deleting them, for example to a NAS. They still play while this folder is reachable. Without an archive, the oldest files are deleted."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Lorsque les limites ci-dessous sont atteintes, Dayflow déplace ici les enregistrements et accélérés les plus anciens au lieu de les supprimer, par exemple vers un NAS. Ils restent lisibles tant que ce dossier est accessible. Sans archive, les plus anciens fichiers sont supprimés."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下の上限に達すると、Dayflow は最も古い録画とタイムラプスを削除せず、NAS などのこのフォルダへ移動します。このフォルダに接続できる間は再生できます。アーカイブがない場合、最も古いファイルは削除されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "아래 한도에 도달하면 Dayflow는 가장 오래된 녹화와 타임랩스를 삭제하지 않고 NAS 같은 이 폴더로 옮깁니다. 이 폴더에 접근할 수 있는 동안에는 계속 재생됩니다. 보관 폴더가 없으면 가장 오래된 파일이 삭제됩니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Когда достигаются лимиты ниже, Dayflow переносит самые старые записи и таймлапсы сюда, например на NAS, вместо удаления. Они воспроизводятся, пока эта папка доступна. Без архива самые старые файлы удаляются."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "达到下方的容量上限时，Dayflow 会把最旧的录制和延时视频移到这里（例如 NAS），而不是删除。只要这个文件夹可访问，仍可播放。没有归档时，最旧的文件会被删除。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "達到下方的容量上限時，Dayflow 會把最舊的錄影和縮時影片移到這裡（例如 NAS），而不是刪除。只要這個資料夾連得上，仍可播放。沒有歸檔時，最舊的檔案會被刪除。"
+          }
+        }
+      }
+    },
+    "storage.archive.title" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Archiv"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Archive"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Archive"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アーカイブ"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보관"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Архив"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "归档"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "歸檔"
+          }
+        }
+      }
+    },
+    "storage.archive.turnOff" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ausschalten"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Turn off"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Désactiver"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "オフにする"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "끄기"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Выключить"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "关闭"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "關閉"
+          }
+        }
+      }
+    },
+    "storage.archive.unavailable" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Der Archivordner ist gerade nicht verfügbar. Es wird nichts gelöscht; alte Dateien bleiben auf diesem Mac, bis er wieder erreichbar ist."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The archive folder isn't available right now. Nothing is deleted; old files stay on this Mac until it is back."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Le dossier d'archive n'est pas disponible pour le moment. Rien n'est supprimé ; les anciens fichiers restent sur ce Mac jusqu'à son retour."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "アーカイブフォルダは現在利用できません。何も削除されず、古いファイルは復旧するまでこの Mac に残ります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "보관 폴더를 지금은 사용할 수 없습니다. 아무것도 삭제되지 않으며 오래된 파일은 다시 연결될 때까지 이 Mac에 남습니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Папка архива сейчас недоступна. Ничего не удаляется; старые файлы остаются на этом Mac, пока она не вернётся."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "归档文件夹目前无法使用。不会删除任何内容，旧文件会先留在这台 Mac 上，直到它恢复。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "歸檔資料夾目前無法使用。不會刪除任何東西，舊檔案會先留在這台 Mac 上，直到它恢復。"
+          }
+        }
+      }
+    },
     "storage.location.choose" : {
       "localizations" : {
         "de" : {
@@ -1392,6 +1756,110 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "該資料夾目前無法使用，新檔案會先存到預設位置。"
+          }
+        }
+      }
+    },
+    "storage.location.warning.cloud" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dieser Ordner wird von einem Cloud-Dienst synchronisiert. Nutze dessen Spiegelmodus (offline), damit die Dateien auf diesem Mac bleiben, und rechne mit viel Upload-Bandbreite und Speicher für Aufnahmen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This folder is synced by a cloud service. Use its mirror (offline) mode so files stay on this Mac, and expect recordings to use a lot of upload bandwidth and storage."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ce dossier est synchronisé par un service cloud. Utilisez son mode miroir (hors ligne) pour que les fichiers restent sur ce Mac, et prévoyez beaucoup de bande passante et de stockage pour les enregistrements."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このフォルダはクラウドサービスで同期されています。ファイルがこの Mac に残るよう、ミラー（オフライン）モードを使ってください。録画は多くのアップロード帯域と容量を使います。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 폴더는 클라우드 서비스로 동기화됩니다. 파일이 이 Mac에 남도록 미러(오프라인) 모드를 사용하세요. 녹화는 업로드 대역폭과 저장 공간을 많이 사용합니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Эта папка синхронизируется облачным сервисом. Используйте его режим зеркала (офлайн), чтобы файлы оставались на этом Mac, и учитывайте, что записи требуют много трафика и места."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该文件夹由云服务同步。请使用其镜像（离线）模式，让文件保留在这台 Mac 上；录制会占用大量上传带宽和存储空间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "該資料夾由雲端服務同步。請使用其鏡像（離線）模式，讓檔案保留在這台 Mac 上；錄影會佔用大量上傳頻寬和儲存空間。"
+          }
+        }
+      }
+    },
+    "storage.location.warning.icloud" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Dieser Ordner liegt in iCloud Drive. Wähle dafür „Heruntergeladen behalten“, sonst ersetzt macOS ältere Aufnahmen durch Platzhalter, die vor der Wiedergabe geladen werden müssen. Aufnahmen können viel iCloud-Speicher belegen."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "This folder is in iCloud Drive. Choose \"Keep Downloaded\" for it, or macOS may swap older recordings for placeholders that must download before they play. Recordings can use a lot of iCloud space."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Ce dossier se trouve dans iCloud Drive. Choisissez « Conserver téléchargé », sinon macOS peut remplacer les anciens enregistrements par des espaces réservés à télécharger avant lecture. Les enregistrements peuvent occuper beaucoup d'espace iCloud."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "このフォルダは iCloud Drive にあります。「ダウンロードを保持」を選ばないと、macOS が古い録画をプレースホルダに置き換え、再生前にダウンロードが必要になることがあります。録画は iCloud の容量を大きく使う場合があります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 폴더는 iCloud Drive에 있습니다. \"다운로드 유지\"를 선택하지 않으면 macOS가 오래된 녹화를 자리 표시자로 바꿔 재생 전에 내려받아야 할 수 있습니다. 녹화는 iCloud 공간을 많이 사용할 수 있습니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Эта папка находится в iCloud Drive. Выберите для неё «Оставить загруженным», иначе macOS может заменить старые записи заглушками, которые нужно скачать перед воспроизведением. Записи могут занимать много места в iCloud."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "该文件夹位于 iCloud 云盘中。请为它选择“保留下载”，否则 macOS 可能把较旧的录制换成占位文件，播放前需要先下载。录制可能占用大量 iCloud 空间。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "該資料夾位於 iCloud 雲碟中。請為它選擇「保留下載」，否則 macOS 可能把較舊的錄影換成佔位檔，播放前需要先下載。錄影可能佔用大量 iCloud 空間。"
           }
         }
       }

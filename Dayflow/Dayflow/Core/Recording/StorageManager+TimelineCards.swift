@@ -184,6 +184,15 @@ extension StorageManager {
     }
   }
 
+  /// A timelapse file was moved (to the archive): point its cards at the new path.
+  func repointTimelapse(from oldPath: String, to newPath: String) throws {
+    try timedWrite("repointTimelapse") { db in
+      try db.execute(
+        sql: "UPDATE timeline_cards SET video_summary_url = ? WHERE video_summary_url = ?",
+        arguments: [newPath, oldPath])
+    }
+  }
+
   func deleteTimelineCard(recordId: Int64) -> String? {
     var videoPath: String? = nil
 

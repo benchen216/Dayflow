@@ -23,6 +23,8 @@ final class StorageSettingsViewModel: ObservableObject {
   /// The folder picked for media, nil while using the default.
   @Published var customStoragePath: String? = StorageLocation.customBase?.path
   @Published var storageLocationError: String?
+  @Published var archivePath: String? = ArchiveLocation.configuredBase?.path
+  @Published var archiveError: String?
 
   let usageFormatter: ByteCountFormatter = {
     let formatter = ByteCountFormatter()
@@ -199,6 +201,9 @@ final class StorageSettingsViewModel: ObservableObject {
 
   var isStorageLocationUnavailable: Bool { StorageLocation.isCustomUnavailable }
   var storageLocationNeedsRestart: Bool { StorageLocation.needsRestart }
+  var storageLocationCloudSync: StorageLocation.CloudSyncKind? {
+    StorageLocation.cloudSyncKind(for: customStoragePath.map { URL(fileURLWithPath: $0) })
+  }
 
   func chooseStorageFolder() {
     let panel = NSOpenPanel()
@@ -222,6 +227,42 @@ final class StorageSettingsViewModel: ObservableObject {
     } catch {
       storageLocationError = error.localizedDescription
     }
+  }
+
+  var isArchiveUnavailable: Bool { ArchiveLocation.isConfigured && ArchiveLocation.availableBase == nil }
+  var archiveCloudSync: StorageLocation.CloudSyncKind? {
+    StorageLocation.cloudSyncKind(for: archivePath.map { URL(fileURLWithPath: $0) })
+  }
+
+  func chooseArchiveFolder() {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = false
+    panel.canChooseDirectories = true
+    panel.canCreateDirectories = true
+    panel.allowsMultipleSelection = false
+    panel.message = String(
+      localized: "storage.archive.panelMessage",
+      defaultValue: "Choose where Dayflow moves old recordings and timelapses")
+    panel.prompt = String(localized: "storage.location.panelPrompt", defaultValue: "Choose")
+    if let current = ArchiveLocation.configuredBase { panel.directoryURL = current }
+    guard panel.runModal() == .OK, let url = panel.url else { return }
+
+    do {
+      try ArchiveLocation.validate(url)
+      ArchiveLocation.configuredBase = url
+      archivePath = url.path
+      archiveError = nil
+      AnalyticsService.shared.capture("archive_location_changed", ["enabled": true])
+    } catch {
+      archiveError = error.localizedDescription
+    }
+  }
+
+  func turnOffArchive() {
+    ArchiveLocation.configuredBase = nil
+    archivePath = nil
+    archiveError = nil
+    AnalyticsService.shared.capture("archive_location_changed", ["enabled": false])
   }
 
   func resetStorageFolder() {

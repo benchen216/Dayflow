@@ -9,6 +9,7 @@ struct SettingsStorageTabView: View {
       recordingQualitySection
       storageLocationSection
       diskUsageSection
+      archiveSection
     }
     .alert(isPresented: $viewModel.showLimitConfirmation) {
       guard let pending = viewModel.pendingLimit,
@@ -204,6 +205,9 @@ struct SettingsStorageTabView: View {
         if let error = viewModel.storageLocationError {
           storageNote(error)
         }
+        if let cloud = viewModel.storageLocationCloudSync {
+          storageNote(cloudSyncWarning(cloud))
+        }
         if viewModel.isStorageLocationUnavailable {
           storageNote(
             String(
@@ -219,6 +223,75 @@ struct SettingsStorageTabView: View {
             ))
         }
       }
+    }
+  }
+
+  private var archiveSection: some View {
+    SettingsSection(
+      title: String(localized: "storage.archive.title", defaultValue: "Archive"),
+      subtitle: String(
+        localized: "storage.archive.subtitle",
+        defaultValue:
+          "When the limits below are reached, Dayflow moves the oldest recordings and timelapses here instead of deleting them, for example to a NAS. They still play while this folder is reachable. Without an archive, the oldest files are deleted.")
+    ) {
+      VStack(alignment: .leading, spacing: 12) {
+        HStack(alignment: .center, spacing: 16) {
+          Text(
+            viewModel.archivePath
+              ?? String(
+                localized: "storage.archive.off",
+                defaultValue: "Off. The oldest files are deleted at the limit.")
+          )
+          .font(.custom("Figtree", size: 13))
+          .foregroundColor(SettingsStyle.text)
+          .lineLimit(2)
+          .truncationMode(.middle)
+          .textSelection(.enabled)
+          Spacer(minLength: 12)
+          HStack(spacing: 8) {
+            SettingsSecondaryButton(
+              title: String(localized: "storage.location.choose", defaultValue: "Choose folder…"),
+              action: viewModel.chooseArchiveFolder)
+            if viewModel.archivePath != nil {
+              SettingsSecondaryButton(
+                title: String(localized: "storage.archive.turnOff", defaultValue: "Turn off"),
+                action: viewModel.turnOffArchive)
+            }
+          }
+        }
+
+        if let error = viewModel.archiveError {
+          storageNote(error)
+        }
+        if let cloud = viewModel.archiveCloudSync {
+          storageNote(cloudSyncWarning(cloud))
+        }
+        if viewModel.isArchiveUnavailable {
+          storageNote(
+            String(
+              localized: "storage.archive.unavailable",
+              defaultValue:
+                "The archive folder isn't available right now. Nothing is deleted; old files stay on this Mac until it is back."
+            ))
+        }
+      }
+    }
+  }
+
+  private func cloudSyncWarning(_ kind: StorageLocation.CloudSyncKind) -> String {
+    switch kind {
+    case .iCloudDrive:
+      return String(
+        localized: "storage.location.warning.icloud",
+        defaultValue:
+          "This folder is in iCloud Drive. Choose \"Keep Downloaded\" for it, or macOS may swap older recordings for placeholders that must download before they play. Recordings can use a lot of iCloud space."
+      )
+    case .fileProvider:
+      return String(
+        localized: "storage.location.warning.cloud",
+        defaultValue:
+          "This folder is synced by a cloud service. Use its mirror (offline) mode so files stay on this Mac, and expect recordings to use a lot of upload bandwidth and storage."
+      )
     }
   }
 

@@ -65,6 +65,14 @@ final class TimelapseStorageManager {
       var usage = (try? fileMgr.allocatedSizeOfDirectory(at: root)) ?? 0
       if usage <= limitBytes { return }
 
+      // With an archive folder set, the oldest timelapses are moved there instead of deleted. If it
+      // is set but unreachable, keep everything until it comes back.
+      let archiveBase = ArchiveLocation.availableBase
+      if ArchiveLocation.isConfigured && archiveBase == nil {
+        print("⚠️ Archive folder isn't reachable; keeping timelapses on this Mac for now")
+        return
+      }
+
       let entries = try fileMgr.contentsOfDirectory(
         at: root,
         includingPropertiesForKeys: [
@@ -88,10 +96,21 @@ final class TimelapseStorageManager {
         if usage <= limitBytes { break }
         let size = (try? entrySize(entry)) ?? 0
         do {
-          try fileMgr.removeItem(at: entry)
+          if let archiveBase {
+            var isDirectory: ObjCBool = false
+            fileMgr.fileExists(atPath: entry.path, isDirectory: &isDirectory)
+            guard !isDirectory.boolValue else { continue }  // Only single files are archived
+            try ArchiveLocation.move(
+              entry, into: ArchiveLocation.directory("timelapses", in: archiveBase)
+            ) { destination in
+              try StorageManager.shared.repointTimelapse(from: entry.path, to: destination.path)
+            }
+          } else {
+            try fileMgr.removeItem(at: entry)
+          }
           usage -= size
         } catch {
-          print("⚠️ Failed to delete timelapse entry at \(entry.path): \(error)")
+          print("⚠️ Failed to remove timelapse entry at \(entry.path): \(error)")
         }
       }
     } catch {

@@ -54,6 +54,24 @@ extension StorageManager {
     }
   }
 
+  /// A segment file was moved (to the archive): point its frames at the new path.
+  func repointScreenshotSegment(from oldPath: String, to newPath: String) throws {
+    try timedWrite("repointScreenshotSegment") { db in
+      try db.execute(
+        sql: "UPDATE screenshots SET file_path = ? WHERE file_path = ?",
+        arguments: [newPath, oldPath])
+    }
+  }
+
+  /// Marks a segment's frames as gone, for a file that was deleted or is missing.
+  func markScreenshotSegmentDeleted(path: String) throws {
+    try timedWrite("markScreenshotSegmentDeleted") { db in
+      try db.execute(
+        sql: "UPDATE screenshots SET is_deleted = 1 WHERE file_path = ? AND is_deleted = 0",
+        arguments: [path])
+    }
+  }
+
   /// Path of the newest segment that still has live frames, for crash recovery at launch.
   func mostRecentSegmentPath() -> String? {
     try? timedRead("mostRecentSegmentPath") { db in

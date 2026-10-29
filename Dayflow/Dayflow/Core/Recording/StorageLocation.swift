@@ -88,6 +88,32 @@ enum StorageLocation {
   }
 }
 
+extension StorageLocation {
+  enum CloudSyncKind: Equatable {
+    case iCloudDrive
+    /// Google Drive, Dropbox, OneDrive and other macOS File Provider folders.
+    case fileProvider
+  }
+
+  /// Whether `url` sits inside a folder a cloud service syncs, where files can be evicted to
+  /// placeholders or uploaded while still being written.
+  static func cloudSyncKind(
+    for url: URL?, home: URL = URL(fileURLWithPath: NSHomeDirectory(), isDirectory: true)
+  ) -> CloudSyncKind? {
+    guard let url else { return nil }
+    let path = url.standardizedFileURL.resolvingSymlinksInPath().path
+    let library = home.standardizedFileURL.resolvingSymlinksInPath()
+      .appendingPathComponent("Library", isDirectory: true).path
+    if isInside(path, "\(library)/Mobile Documents") { return .iCloudDrive }
+    if isInside(path, "\(library)/CloudStorage") { return .fileProvider }
+    return nil
+  }
+
+  private static func isInside(_ path: String, _ folder: String) -> Bool {
+    path == folder || path.hasPrefix(folder + "/")
+  }
+}
+
 enum StorageLocationError: LocalizedError {
   case notWritable
 

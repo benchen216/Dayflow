@@ -443,40 +443,67 @@ extension StorageManager {
       // Soft-delete whole segments, oldest first, until the estimated size fits.
       // Files are removed by cleanupRecordingStragglers once none of their frames are live.
       if currentSize > limit {
+        // With an archive folder set, the oldest files are moved there instead of deleted. If it
+        // is set but unreachable (an unmounted NAS), keep everything here until it comes back.
+        let archiveBase = ArchiveLocation.availableBase
+        if ArchiveLocation.isConfigured && archiveBase == nil {
+          print("⚠️ Archive folder isn't reachable; keeping recordings on this Mac for now")
+          return
+        }
+        let archivedPrefix = archiveBase.map {
+          ArchiveLocation.directory("recordings", in: $0).path + "/"
+        }
+
         let activeSegmentPath = FrameStore.shared.activeSegmentPath
         var freedSpace: Int64 = 0
         var passCount = 0
 
         while currentSize - freedSpace > limit {
           var freedThisPass: Int64 = 0
-          var markedThisPass = 0
+          var handledThisPass = 0
 
-          try timedWrite("purgeScreenshots") { db in
-            let oldSegments = try Row.fetchAll(
+          // Segments already in the archive don't take local space; leave them out.
+          let oldSegments = try timedRead("oldestScreenshotSegments") { db in
+            try Row.fetchAll(
               db,
               sql: """
                     SELECT file_path, SUM(file_size) AS bytes
                     FROM screenshots
                     WHERE is_deleted = 0
+                      AND (? IS NULL OR substr(file_path, 1, ?) != ?)
                     GROUP BY file_path
                     ORDER BY MIN(captured_at) ASC
                     LIMIT 20
-                """)
-
-            for segment in oldSegments {
-              guard let path: String = segment["file_path"], path != activeSegmentPath else {
-                continue
-              }
-              let bytes: Int64? = segment["bytes"]
-              try db.execute(
-                sql: "UPDATE screenshots SET is_deleted = 1 WHERE file_path = ? AND is_deleted = 0",
-                arguments: [path])
-              freedThisPass += bytes ?? 0
-              markedThisPass += 1
-            }
+                """,
+              arguments: [archivedPrefix, archivedPrefix?.unicodeScalars.count ?? 0, archivedPrefix])
           }
 
-          if markedThisPass == 0 {
+          for segment in oldSegments {
+            guard let path: String = segment["file_path"], path != activeSegmentPath else {
+              continue
+            }
+            let bytes: Int64? = segment["bytes"]
+            if let archiveBase, fileMgr.fileExists(atPath: path) {
+              do {
+                try ArchiveLocation.move(
+                  URL(fileURLWithPath: path),
+                  into: ArchiveLocation.directory("recordings", in: archiveBase)
+                ) { destination in
+                  try self.repointScreenshotSegment(from: path, to: destination.path)
+                }
+              } catch {
+                print("⚠️ Failed to archive \(path): \(error)")
+                continue
+              }
+            } else {
+              // No archive, or the file is already gone: retire the frames; stragglers removes it.
+              try markScreenshotSegmentDeleted(path: path)
+            }
+            freedThisPass += bytes ?? 0
+            handledThisPass += 1
+          }
+
+          if handledThisPass == 0 {
             break
           }
 
