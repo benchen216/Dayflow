@@ -9,7 +9,7 @@ final class TimelapseStorageManager {
 
   private init() {
     let appSupport = fileMgr.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    let path = appSupport.appendingPathComponent("Dayflow/timelapses", isDirectory: true)
+    let path = appSupport.appendingPathComponent("\(AppDataDirectory.name)/timelapses", isDirectory: true)
     root = path
     try? fileMgr.createDirectory(at: root, withIntermediateDirectories: true)
   }

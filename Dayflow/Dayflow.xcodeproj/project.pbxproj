@@ -463,8 +463,10 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.7.5;
-				PRODUCT_BUNDLE_IDENTIFIER = teleportlabs.com.Dayflow;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_KEY_CFBundleDisplayName = "Dayflow+";
+				PRODUCT_BUNDLE_IDENTIFIER = com.benchen216.DayflowPlus;
+				PRODUCT_MODULE_NAME = Dayflow;
+				PRODUCT_NAME = DayflowPlus;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -499,8 +501,10 @@
 				);
 				MACOSX_DEPLOYMENT_TARGET = 14.0;
 				MARKETING_VERSION = 2.7.5;
-				PRODUCT_BUNDLE_IDENTIFIER = teleportlabs.com.Dayflow;
-				PRODUCT_NAME = "$(TARGET_NAME)";
+				INFOPLIST_KEY_CFBundleDisplayName = "Dayflow+";
+				PRODUCT_BUNDLE_IDENTIFIER = com.benchen216.DayflowPlus;
+				PRODUCT_MODULE_NAME = Dayflow;
+				PRODUCT_NAME = DayflowPlus;
 				PROVISIONING_PROFILE_SPECIFIER = "";
 				SWIFT_EMIT_LOC_STRINGS = YES;
 				SWIFT_VERSION = 5.0;
@@ -521,7 +525,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Dayflow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayflow";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DayflowPlus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DayflowPlus";
 			};
 			name = Debug;
 		};
@@ -539,7 +543,7 @@
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
-				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Dayflow.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Dayflow";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/DayflowPlus.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/DayflowPlus";
 			};
 			name = Release;
 		};

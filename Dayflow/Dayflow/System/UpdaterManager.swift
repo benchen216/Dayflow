@@ -38,8 +38,16 @@ final class UpdaterManager: NSObject, ObservableObject {
 
   private let logger = Logger(subsystem: "com.dayflow.app", category: "sparkle")
 
+  /// Dayflow+ ships without an appcast so upstream releases can't replace
+  /// it. With no SUFeedURL in Info.plist, Sparkle is never started.
+  static let isUpdatingEnabled = Bundle.main.object(forInfoDictionaryKey: "SUFeedURL") != nil
+
   private override init() {
     super.init()
+    guard Self.isUpdatingEnabled else {
+      print("[Sparkle] no SUFeedURL; updates are off in this build")
+      return
+    }
 
     // Print what Sparkle thinks the settings are *before* starting:
     print("[Sparkle] bundleId=\(Bundle.main.bundleIdentifier ?? "nil")")
@@ -63,6 +71,10 @@ final class UpdaterManager: NSObject, ObservableObject {
   }
 
   func checkForUpdates(showUI: Bool = false) {
+    guard Self.isUpdatingEnabled else {
+      statusText = "Updates are off in this build"
+      return
+    }
     isChecking = true
     statusText = "Checking…"
     track(

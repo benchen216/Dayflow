@@ -32,13 +32,13 @@ final class AgentBridgeServer {
   static var socketPath: String {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    return appSupport.appendingPathComponent("Dayflow/agent.sock").path
+    return appSupport.appendingPathComponent("\(AppDataDirectory.name)/agent.sock").path
   }
 
   private static var writeLogPath: String {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    return appSupport.appendingPathComponent("Dayflow/agent-writes.log").path
+    return appSupport.appendingPathComponent("\(AppDataDirectory.name)/agent-writes.log").path
   }
 
   // MARK: - Lifecycle

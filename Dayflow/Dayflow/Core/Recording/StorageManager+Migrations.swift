@@ -12,7 +12,7 @@ extension StorageManager {
       .appendingPathComponent(
         "Library/Containers/\(bundleID)/Data/Library/Application Support/Dayflow", isDirectory: true
       )
-    let newBase = appSupport.appendingPathComponent("Dayflow", isDirectory: true)
+    let newBase = appSupport.appendingPathComponent(AppDataDirectory.name, isDirectory: true)
 
     guard legacyBase.path != newBase.path else { return }
 

@@ -271,7 +271,7 @@ final class AgentPlaybackHost: NSObject, ObservableObject, WKNavigationDelegate,
       """
     let dataDirectory = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("Dayflow/agents", isDirectory: true)
+      .appendingPathComponent("\(AppDataDirectory.name)/agents", isDirectory: true)
     // Run the wrapper from a file instead of `node -e`: some endpoint security tools
     // (e.g. SentinelOne) kill processes whose arguments look like overly long paths.
     // If the file can't be written, fall back to the inline script.

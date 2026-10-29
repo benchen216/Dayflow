@@ -135,7 +135,7 @@ final class DailyBriefStore: ObservableObject {
 
   nonisolated static func rootDirectory() -> URL {
     URL(fileURLWithPath: NSHomeDirectory())
-      .appendingPathComponent("Library/Application Support/Dayflow/daily_brief", isDirectory: true)
+      .appendingPathComponent("Library/Application Support/\(AppDataDirectory.name)/daily_brief", isDirectory: true)
   }
 
   nonisolated static func briefDirectory(for day: String) -> URL {

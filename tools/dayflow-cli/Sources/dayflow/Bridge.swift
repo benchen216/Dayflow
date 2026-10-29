@@ -20,7 +20,7 @@ enum AgentBridge {
   static var socketPath: String {
     let appSupport = FileManager.default.urls(
       for: .applicationSupportDirectory, in: .userDomainMask)[0]
-    return appSupport.appendingPathComponent("Dayflow/agent.sock").path
+    return appSupport.appendingPathComponent("\(AppIdentity.dataDirectoryName)/agent.sock").path
   }
 
   static var editsEnabled: Bool {

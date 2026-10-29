@@ -182,7 +182,13 @@ struct CodexMCPRegistration: @unchecked Sendable {
       && helpersURL.lastPathComponent == "Helpers"
       && contentsURL.lastPathComponent == "Contents"
       && appURL.pathExtension == "app"
-      && appURL.deletingPathExtension().lastPathComponent == "Dayflow"
+      && Self.bundledAppNames.contains(appURL.deletingPathExtension().lastPathComponent)
+  }
+
+  /// Upstream Dayflow and this Dayflow+ build both ship the same helper, so
+  /// either one's registration counts as ours to repair.
+  private static var bundledAppNames: Set<String> {
+    ["Dayflow", Bundle.main.bundleURL.deletingPathExtension().lastPathComponent]
   }
 
   private func standardizedPath(_ path: String) -> String {

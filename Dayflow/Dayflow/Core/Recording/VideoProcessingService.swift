@@ -66,7 +66,7 @@ actor VideoProcessingService {
     // Create a persistent directory for timelapses within Application Support
     let appSupportURL = fileManager.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
     self.persistentTimelapsesRootURL = appSupportURL.appendingPathComponent(
-      "Dayflow/timelapses", isDirectory: true)
+      "\(AppDataDirectory.name)/timelapses", isDirectory: true)
     // Ensure the root timelapses directory exists
     do {
       try fileManager.createDirectory(

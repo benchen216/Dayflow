@@ -4,13 +4,15 @@
 <dict>
 	<key>ATSApplicationFontsPath</key>
 	<string>.</string>
+	<key>CFBundleName</key>
+	<string>Dayflow+</string>
 	<key>CFBundleShortVersionString</key>
 	<string>2.7.5</string>
 	<key>CFBundleURLTypes</key>
 	<array>
 		<dict>
 			<key>CFBundleURLName</key>
-			<string>teleportlabs.com.Dayflow</string>
+			<string>com.benchen216.DayflowPlus</string>
 			<key>CFBundleURLSchemes</key>
 			<array>
 				<string>dayflow</string>
@@ -30,15 +32,13 @@
 	<key>PHPostHogApiKey</key>
 	<string>$(POSTHOG_API_KEY)</string>
 	<key>SUAllowsAutomaticUpdates</key>
-	<true/>
+	<false/>
 	<key>SUAutomaticallyUpdate</key>
-	<true/>
+	<false/>
 	<key>SUEnableAutomaticChecks</key>
-	<true/>
+	<false/>
 	<key>SUEnableInstallerLauncherService</key>
 	<true/>
-	<key>SUFeedURL</key>
-	<string>https://dayflow.so/appcast.xml</string>
 	<key>SUPublicEDKey</key>
 	<string>lf33Kn/Gx26j9zfGtsNNc6Lk2QTBHyXkFxxwnsXmdYA=</string>
 	<key>SUScheduledCheckInterval</key>

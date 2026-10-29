@@ -67,7 +67,7 @@ enum AgentUsageTelemetryQueue {
 
   private static var appSupportDirectory: URL {
     FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("Dayflow", isDirectory: true)
+      .appendingPathComponent(AppDataDirectory.name, isDirectory: true)
   }
 
   private static var queueURL: URL {

@@ -54,7 +54,7 @@ enum AgentUsageTelemetry {
 
   private static var appSupportDirectory: URL {
     FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-      .appendingPathComponent("Dayflow", isDirectory: true)
+      .appendingPathComponent(AppIdentity.dataDirectoryName, isDirectory: true)
   }
 
   private static var queueURL: URL {
@@ -163,7 +163,7 @@ enum AgentUsageTelemetry {
   }
 
   private static var analyticsEnabled: Bool {
-    let defaults = UserDefaults(suiteName: "teleportlabs.com.Dayflow")
+    let defaults = UserDefaults(suiteName: AppIdentity.bundleIdentifier)
     guard defaults?.object(forKey: "analyticsOptIn") != nil else { return true }
     return defaults?.bool(forKey: "analyticsOptIn") == true
   }

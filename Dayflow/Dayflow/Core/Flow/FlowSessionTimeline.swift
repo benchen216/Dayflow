@@ -94,7 +94,7 @@ final class FlowSessionTimeline: ObservableObject {
     let base =
       FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask).first
       ?? FileManager.default.temporaryDirectory
-    let directory = base.appendingPathComponent("Dayflow", isDirectory: true)
+    let directory = base.appendingPathComponent(AppDataDirectory.name, isDirectory: true)
     try? FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
     return directory.appendingPathComponent("flow-session-timeline.json")
   }()
