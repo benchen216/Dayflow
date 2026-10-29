@@ -105,7 +105,7 @@ final class VoiceNoteRecorder: ObservableObject {
     try? await Task.sleep(nanoseconds: 1_200_000_000)
     transcriber = nil
 
-    var segments = committedTranscript
+    var segments = committedTranscript.sorted { $0.offset < $1.offset }
     let leftover = partialTranscript.trimmingCharacters(in: .whitespacesAndNewlines)
     if !leftover.isEmpty {
       let lastEnd = segments.last.map { $0.offset + $0.duration } ?? 0
@@ -157,7 +157,11 @@ final class VoiceNoteRecorder: ObservableObject {
       )
       return nil
     }
-    guard let transcriber = LiveTranscriber(sampleRate: VoiceCaptureEngine.sampleRate) else {
+    guard let transcriber = LiveTranscriber(
+        sampleRate: VoiceCaptureEngine.sampleRate,
+        locale: SpeechLanguage.locale(
+          for: UserDefaults.standard.string(forKey: SpeechLanguage.preferenceKey)
+            ?? SpeechLanguage.followApp)) else {
       transcriptionNotice = String(
         localized: "voiceNotes.notice.speechUnavailable",
         defaultValue: "Speech recognition isn't available for your language right now.")

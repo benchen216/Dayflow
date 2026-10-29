@@ -373,4 +373,63 @@ final class VoiceNotesTests: XCTestCase {
       return XCTFail("Expected a failure for a note without transcript")
     }
   }
+
+  // MARK: - Speech language
+
+  func testSpeechLanguageFollowsAppLanguageNotSystemOrder() {
+    let system = ["en-TW", "zh-Hant-TW"]
+    XCTAssertEqual(
+      SpeechLanguage.locale(for: "", appLanguage: .traditionalChinese, preferredLanguages: system)
+        .identifier(.bcp47), "zh-TW")
+    XCTAssertEqual(
+      SpeechLanguage.locale(for: "", appLanguage: .system, preferredLanguages: system)
+        .identifier(.bcp47),
+      "en-US")
+  }
+
+  func testSpeechLanguageStoredChoiceWins() {
+    XCTAssertEqual(
+      SpeechLanguage.locale(for: "ja-JP", appLanguage: .english, preferredLanguages: [])
+        .identifier(.bcp47),
+      "ja-JP")
+  }
+
+  func testSpeechLanguageMapsChineseScripts() {
+    XCTAssertEqual(SpeechLanguage.identifier(forLanguageTag: "zh-Hant-TW"), "zh-TW")
+    XCTAssertEqual(SpeechLanguage.identifier(forLanguageTag: "zh-TW"), "zh-TW")
+    XCTAssertEqual(SpeechLanguage.identifier(forLanguageTag: "zh-Hans-CN"), "zh-CN")
+    XCTAssertEqual(SpeechLanguage.identifier(forLanguageTag: "ko-KR"), "ko-KR")
+    XCTAssertNil(SpeechLanguage.identifier(forLanguageTag: "sv-SE"))
+  }
+
+  // MARK: - Utterance tracking
+
+  func testTrackerKeepsGrowingTextTogether() {
+    var tracker = UtteranceTracker()
+    XCTAssertNil(tracker.update(text: "今天", start: 0.2, end: 0.8))
+    XCTAssertNil(tracker.update(text: "今天開會", start: 0.2, end: 1.4))
+    XCTAssertNil(tracker.update(text: "今天開會討論預算", start: 0.2, end: 2.6))
+  }
+
+  func testTrackerAllowsRevisedWords() {
+    var tracker = UtteranceTracker()
+    _ = tracker.update(text: "hello wold", start: 0, end: 1)
+    XCTAssertNil(tracker.update(text: "hello world and", start: 0, end: 1.6))
+  }
+
+  func testTrackerSavesTextWhenRecognizerStartsOver() {
+    var tracker = UtteranceTracker()
+    _ = tracker.update(text: "今天開會討論預算", start: 0.2, end: 2.6)
+    let saved = tracker.update(text: "下週", start: 4.1, end: 4.6)
+    XCTAssertEqual(saved?.text, "今天開會討論預算")
+    XCTAssertEqual(saved?.start, 0.2)
+    XCTAssertEqual(tracker.pending?.text, "下週")
+  }
+
+  func testTrackerSavesTextWhenTimestampsRestart() {
+    var tracker = UtteranceTracker()
+    _ = tracker.update(text: "first sentence here", start: 0.1, end: 5.0)
+    let saved = tracker.update(text: "second sentence here", start: 0.1, end: 1.2)
+    XCTAssertEqual(saved?.text, "first sentence here")
+  }
 }

@@ -6,6 +6,7 @@ struct VoiceNotesView: View {
   @ObservedObject private var store = VoiceNoteStore.shared
   @ObservedObject private var recorder = VoiceNoteRecorder.shared
   @AppStorage(VoiceNoteRecorder.cameraPreferenceKey) private var useCamera = false
+  @AppStorage(SpeechLanguage.preferenceKey) private var speechLanguage = SpeechLanguage.followApp
   @State private var selectedID: UUID?
 
   var body: some View {
@@ -72,6 +73,32 @@ struct VoiceNotesView: View {
     .padding(20)
   }
 
+  private var languagePicker: some View {
+    HStack(spacing: 8) {
+      Text(String(localized: "voiceNotes.language", defaultValue: "Speech language"))
+        .font(.custom("Figtree", size: 12))
+        .foregroundColor(theme.textSecondary)
+      Spacer(minLength: 0)
+      Picker("", selection: $speechLanguage) {
+        Text(
+          String(
+            localized: "voiceNotes.language.followApp", defaultValue: "Same as app language")
+        ).tag(SpeechLanguage.followApp)
+        ForEach(SpeechLanguage.options, id: \.self) { identifier in
+          Text(SpeechLanguage.displayName(identifier)).tag(identifier)
+        }
+      }
+      .labelsHidden()
+      .controlSize(.small)
+      .fixedSize()
+    }
+    .help(
+      String(
+        localized: "voiceNotes.languageHelp",
+        defaultValue: "Speech recognition can't detect the language, so pick the one you'll speak."
+      ))
+  }
+
   private var recordCard: some View {
     VStack(alignment: .leading, spacing: 12) {
       switch recorder.state {
@@ -106,6 +133,7 @@ struct VoiceNotesView: View {
             systemImage: "mic.fill")
         }
         .buttonStyle(VoicePillButtonStyle(prominent: true))
+        languagePicker
         Toggle(isOn: $useCamera) {
           Text(
             String(
