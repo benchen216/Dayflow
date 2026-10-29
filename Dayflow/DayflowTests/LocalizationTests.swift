@@ -31,6 +31,13 @@ final class LocalizationTests: XCTestCase {
       let permission = bundle.localizedString(
         forKey: "NSScreenCaptureUsageDescription", value: nil, table: "InfoPlist")
       XCTAssertNotEqual(permission, "NSScreenCaptureUsageDescription", language)
+      for key in [
+        "NSMicrophoneUsageDescription", "NSCameraUsageDescription",
+        "NSSpeechRecognitionUsageDescription",
+      ] {
+        let value = bundle.localizedString(forKey: key, value: nil, table: "InfoPlist")
+        XCTAssertNotEqual(value, key, "\(language) \(key)")
+      }
     }
   }
 

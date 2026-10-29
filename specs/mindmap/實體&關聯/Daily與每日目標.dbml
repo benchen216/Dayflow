@@ -1,0 +1,58 @@
+// Daily 與每日目標（aggregate 詳細模型）：每天一份的 Daily 站會，以及每天的專注目標與分類快照。
+// 本機 SQLite。day 欄位都是時間軸上的一天（YYYY-MM-DD，以早上 4:00 為界）。
+// 規則見 ../功能/Daily站會/[機制]Daily站會.md 與 ../功能/每日目標/[機制]每日目標.md。
+
+Enum day_goal_category_kind {
+  focus [note: '算專注的分類']
+  distraction [note: '算分心的分類']
+}
+
+Table daily_standup_entries {
+  standup_day text [pk, not null, note: '目標日']
+  payload_json text [not null, note: 'JSON {highlightsTitle, highlights: [{id, text}], tasksTitle, tasks: [{id, text}], blockersTitle, blockersBody, generation: {provider, runtime, modelOrTool, sourceDay, generatedAt}}']
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  indexes { created_at [name: 'idx_daily_standup_entries_created_at'] }
+  Note: '每天一份 Daily；重新產生或使用者編輯時整份覆蓋。generation.sourceDay 用來避免同一來源日被兩份 Daily 使用。'
+}
+
+Table day_goals {
+  day text [pk, not null]
+  focus_target_minutes integer [not null]
+  distraction_limit_minutes integer [not null]
+  is_skipped integer [not null, default: 0, note: '1 = 使用者這天選擇略過']
+  created_at integer [not null, note: 'Unix 秒']
+  updated_at integer [not null, note: 'Unix 秒']
+  indexes { updated_at [name: 'idx_day_goals_updated_at'] }
+  Note: '每天最多一份目標；沒有時沿用最近一次保存的目標（依每日目標機制）。'
+}
+
+Table day_goal_categories {
+  day text [not null]
+  kind varchar [not null, check: `kind IN ('focus', 'distraction')`, note: 'day_goal_category_kind']
+  category_id text [not null, note: '分類的身分（UUID）']
+  category_name text [not null, note: '保存當下的分類名稱']
+  category_color_hex text [not null, note: '保存當下的分類顏色']
+  sort_order integer [not null]
+  indexes {
+    (day, kind, category_id) [pk]
+    (day, kind, sort_order) [name: 'idx_day_goal_categories_day_kind']
+  }
+  Note: '目標中的分類快照；保存目標時整批刪除再寫入。'
+}
+
+Table journal_entries {
+  id integer [pk, increment]
+  day text [not null, unique]
+  intentions text
+  notes text
+  goals text
+  reflections text
+  summary text
+  status varchar [not null, default: 'draft']
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  updated_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  Note: '已停用的 Journal 功能留下的資料，只保留不再寫入。（已停用）'
+}
+
+Ref: day_goal_categories.day > day_goals.day

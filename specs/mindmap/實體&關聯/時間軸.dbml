@@ -1,0 +1,46 @@
+// 時間軸（aggregate 詳細模型）：活動卡片與使用者的時段評分。
+// 本機 SQLite。卡片以分類「名稱」保存，不以外鍵指向分類（分類存在 App 偏好設定中，見分類機制）。
+// 卡片刪除為軟刪除（is_deleted）。規則見 ../功能/時間軸/[機制]時間軸.md。
+
+Enum timeline_review_rating {
+  focused [note: '專注']
+  neutral [note: '普通']
+  distracted [note: '分心']
+}
+
+Table timeline_cards {
+  id integer [pk, increment, note: '活動編號（命令列與 MCP 的 record_id）']
+  batch_id integer [note: '產生這張卡片的批次；示範卡片等可能為 null']
+  start text [not null, note: '開始的時鐘時間，格式 h:mm AM/PM（英文）']
+  end text [not null, note: '結束的時鐘時間，格式 h:mm AM/PM（英文）']
+  start_ts integer [note: '開始時間（Unix 秒）']
+  end_ts integer [note: '結束時間（Unix 秒）']
+  day date [not null, note: 'YYYY-MM-DD；依開始時間以早上 4:00 為界']
+  title text [not null, note: '處理失敗的卡片固定為 Processing failed；閒置卡片為 Idle']
+  summary text
+  category text [not null, note: '分類名稱；系統卡片為 System 或 Idle']
+  subcategory text [note: '失敗卡片為 Error']
+  detailed_summary text
+  metadata text [note: 'JSON {distractions: [{startTime, endTime, title, summary}], appSites: {primary, secondary}, isBackupGenerated, idle: {...閒置判定的統計}}；舊資料可能是 distractions 陣列']
+  video_summary_url text [note: '縮時影片的檔案路徑']
+  is_deleted integer [not null, default: 0, note: '1 = 使用者或 agent 已刪除']
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    day [name: 'idx_timeline_cards_day']
+    start_ts [name: 'idx_timeline_cards_start_ts']
+    (start_ts, end_ts) [name: 'idx_timeline_cards_time_range']
+  }
+  Note: '時間軸上的一張活動卡片。AI 改寫時刪除範圍內的舊卡片再寫入新卡片；使用者修改只改 title、category。'
+}
+
+Table timeline_review_ratings {
+  id integer [pk, increment]
+  start_ts integer [not null]
+  end_ts integer [not null]
+  rating varchar [not null, note: 'timeline_review_rating']
+  indexes { (start_ts, end_ts) [name: 'idx_review_ratings_time'] }
+  Note: '使用者對一段時間的評分，不綁卡片。新評分覆蓋重疊部分，舊評分在範圍外的部分拆成新列保留（應用程式維持，資料庫未強制不重疊）。'
+}
+
+// 外部引用：
+// Ref: timeline_cards.batch_id > analysis_batches.id [delete: cascade]  // 錄製與分析.dbml

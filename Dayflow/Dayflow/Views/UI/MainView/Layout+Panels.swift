@@ -69,6 +69,8 @@ extension MainView {
           .padding(15)
       case .chat:
         ChatPanelView()
+      case .voice:
+        VoiceNotesView()
       case .flow:
         Color.clear
       case .agents:

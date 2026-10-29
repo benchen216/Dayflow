@@ -21,6 +21,7 @@ enum SidebarIcon: CaseIterable {
   case daily
   case weekly
   case chat
+  case voice
   case flow
   case agents
   case bug
@@ -32,6 +33,7 @@ enum SidebarIcon: CaseIterable {
     case .daily: return "DailyIcon"
     case .weekly: return "WeeklyIcon"
     case .chat: return "ChatIcon"
+    case .voice: return nil
     case .flow: return "FlowIcon"
     case .agents: return "AgentsIcon"
     case .bug: return nil
@@ -41,6 +43,7 @@ enum SidebarIcon: CaseIterable {
 
   var systemNameFallback: String? {
     switch self {
+    case .voice: return "waveform"
     case .flow: return "water.waves"
     case .agents: return "sparkles"
     case .bug: return "exclamationmark.bubble.fill"
@@ -61,6 +64,10 @@ enum SidebarIcon: CaseIterable {
         localized: "sidebar.weekly", defaultValue: "Weekly",
         comment: "Short sidebar label for the weekly recap view.")
     case .chat: return String(localized: "Chat")
+    case .voice:
+      return String(
+        localized: "sidebar.voice", defaultValue: "Voice",
+        comment: "Short sidebar label for the voice notes view.")
     case .flow: return String(localized: "Flow")
     case .agents: return String(localized: "Agents")
     case .bug: return String(localized: "Support")
@@ -74,6 +81,7 @@ enum SidebarIcon: CaseIterable {
     case .daily: return "daily"
     case .weekly: return "weekly"
     case .chat: return "dashboard"
+    case .voice: return "voice_notes"
     case .flow: return "flow"
     case .agents: return "agents"
     case .bug: return "bug_report"

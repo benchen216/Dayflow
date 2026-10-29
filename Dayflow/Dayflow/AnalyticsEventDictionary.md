@@ -17,7 +17,7 @@ This document lists manual events, properties, and code locations. All events re
   - file: App/AppDelegate.swift
 - app_heartbeat
   - appearance props: `appearance: system|light|dark` (saved preference, defaults to system), `effective_appearance: light|dark` (resolved at each heartbeat, including forced light during onboarding). Sent on startup and hourly; use each person's latest heartbeat for a user split rather than counting events.
-  - props: `session_hours: number`, `cpu_current_pct_bucket?: 0-5%|5-20%|20-50%|50-100%|100-150%|150-200%|>200%`, `cpu_avg_pct_bucket?: 0-5%|5-20%|20-50%|50-100%|100-150%|150-200%|>200%`, `cpu_peak_pct_bucket?: 0-5%|5-20%|20-50%|50-100%|100-150%|150-200%|>200%`, `cpu_sample_count?: int`, `cpu_sampler_interval_s?: int`, `current_tab?: timeline|daily|weekly|dashboard|journal|bug_report|settings`, `timeline_mode?: day|week`
+  - props: `session_hours: number`, `cpu_current_pct_bucket?: 0-5%|5-20%|20-50%|50-100%|100-150%|150-200%|>200%`, `cpu_avg_pct_bucket?: 0-5%|5-20%|20-50%|50-100%|100-150%|150-200%|>200%`, `cpu_peak_pct_bucket?: 0-5%|5-20%|20-50%|50-100%|100-150%|150-200%|>200%`, `cpu_sample_count?: int`, `cpu_sampler_interval_s?: int`, `current_tab?: timeline|daily|weekly|dashboard|voice_notes|journal|bug_report|settings`, `timeline_mode?: day|week`
   - ScreenCaptureKit props (counts since the previous heartbeat): `sck_shareable_content_calls: int`, `sck_screenshot_calls: int`, `sck_failures_while_granted: int`
   - file: App/AppDelegate.swift
 - app_cpu_spike
@@ -134,7 +134,7 @@ This document lists manual events, properties, and code locations. All events re
 
 ## Navigation & Timeline
 - tab_selected
-  - props: `tab: timeline|daily|weekly|dashboard|journal|bug_report|settings`
+  - props: `tab: timeline|daily|weekly|dashboard|voice_notes|journal|bug_report|settings`
   - file: Views/UI/MainView.swift
 - timeline_viewed
   - props: `date_bucket: yyyy-MM-dd`
@@ -181,6 +181,17 @@ This document lists manual events, properties, and code locations. All events re
 - chat_answer_feedback_submitted
   - props: `provider: gemini|codex|claude`, `chat_runtime: gemini_function_calling|chat_cli`, `thumb_direction: up|down`, `share_logs_default: bool`, `share_logs_enabled: bool`, `feedback_message_length: int`, `feedback_message?: string`; when `share_logs_enabled=true`, also include `conversation_id: uuid`, `message_id: uuid`, `message_index: int`, `assistant_message_length: int`, `assistant_has_chart: bool`, `assistant_message_preview: string`
   - file: Views/UI/ChatView.swift
+
+## Voice Notes
+- voice_note_started
+  - props: `camera: bool`
+  - file: Core/VoiceNotes/VoiceNoteRecorder.swift
+- voice_note_saved
+  - props: `seconds: int`, `segments: int`
+  - file: Core/VoiceNotes/VoiceNoteRecorder.swift
+- voice_note_notes_generated
+  - props: `seconds: int`
+  - file: Core/VoiceNotes/VoiceNoteStore.swift
 
 ## Video
 - video_modal_opened

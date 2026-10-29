@@ -67,6 +67,60 @@
         }
       }
     },
+    "NSCameraUsageDescription" : {
+      "comment" : "Privacy - Camera Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dayflow can read your facial expression during a voice note to estimate your mood. Frames are analyzed on your Mac and never saved."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow 可在錄製語音筆記時讀取你的臉部表情來估計情緒。影像只在你的 Mac 上分析，絕不儲存。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow 可在录制语音笔记时读取你的面部表情来估计情绪。画面只在你的 Mac 上分析，绝不保存。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow はボイスメモの録音中に表情を読み取り、気分を推定できます。映像は Mac 上で解析され、保存されることはありません。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow는 음성 메모를 녹음하는 동안 표정을 읽어 기분을 추정할 수 있습니다. 영상은 Mac에서만 분석되며 저장되지 않습니다."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow kann während einer Sprachnotiz deinen Gesichtsausdruck lesen, um deine Stimmung einzuschätzen. Bilder werden auf deinem Mac analysiert und nie gespeichert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow peut lire votre expression faciale pendant une note vocale pour estimer votre humeur. Les images sont analysées sur votre Mac et jamais enregistrées."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow может считывать выражение лица во время голосовой заметки, чтобы оценить ваше настроение. Кадры анализируются на вашем Mac и никогда не сохраняются."
+          }
+        }
+      }
+    },
     "NSHumanReadableCopyright" : {
       "comment" : "Copyright (human-readable)",
       "extractionState" : "extracted_with_value",
@@ -87,7 +141,49 @@
         "en" : {
           "stringUnit" : {
             "state" : "new",
-            "value" : "Dayflow listens while you talk to Flow about your plan. Audio is only used for that conversation."
+            "value" : "Dayflow listens when you talk to Flow about your plan or record a voice note. Voice notes are saved on your Mac."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "當你與 Flow 討論計畫或錄製語音筆記時，Dayflow 會使用麥克風。語音筆記儲存在你的 Mac 上。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "当你与 Flow 讨论计划或录制语音笔记时，Dayflow 会使用麦克风。语音笔记保存在你的 Mac 上。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flow と計画について話すときやボイスメモを録音するときに、Dayflow はマイクを使用します。ボイスメモは Mac に保存されます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Flow와 계획에 대해 이야기하거나 음성 메모를 녹음할 때 Dayflow가 마이크를 사용합니다. 음성 메모는 Mac에 저장됩니다."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow hört zu, wenn du mit Flow über deinen Plan sprichst oder eine Sprachnotiz aufnimmst. Sprachnotizen werden auf deinem Mac gespeichert."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow écoute lorsque vous parlez de votre plan avec Flow ou enregistrez une note vocale. Les notes vocales sont enregistrées sur votre Mac."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow слушает, когда вы обсуждаете план с Flow или записываете голосовую заметку. Голосовые заметки хранятся на вашем Mac."
           }
         }
       }
@@ -141,6 +237,60 @@
           "stringUnit" : {
             "state" : "needs_review",
             "value" : "Dayflow 使用螢幕存取權限建立你的時間軸。錄製內容會保留在你的 Mac 上，你可以隨時暫停或刪除。"
+          }
+        }
+      }
+    },
+    "NSSpeechRecognitionUsageDescription" : {
+      "comment" : "Privacy - Speech Recognition Usage Description",
+      "extractionState" : "extracted_with_value",
+      "localizations" : {
+        "en" : {
+          "stringUnit" : {
+            "state" : "new",
+            "value" : "Dayflow transcribes your voice notes so you can read them back and turn them into meeting notes."
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow 會將語音筆記轉成逐字稿，方便你回顧並整理成會議筆記。"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow 会将语音笔记转成文字稿，方便你回顾并整理成会议笔记。"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow はボイスメモを文字起こしし、読み返したり議事録にまとめたりできるようにします。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow는 음성 메모를 텍스트로 변환하여 다시 읽고 회의록으로 정리할 수 있게 합니다."
+          }
+        },
+        "de" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow transkribiert deine Sprachnotizen, damit du sie nachlesen und daraus Meeting-Notizen erstellen kannst."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow transcrit vos notes vocales pour que vous puissiez les relire et en faire des comptes rendus de réunion."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Dayflow расшифровывает голосовые заметки, чтобы вы могли перечитать их и превратить в заметки о встрече."
           }
         }
       }

@@ -25,8 +25,12 @@
 	<string>$(DAYFLOW_BACKEND_URL)</string>
 	<key>NSAppleEventsUsageDescription</key>
 	<string>Dayflow uses Automation to focus or reopen your agent sessions in the terminal.</string>
+	<key>NSCameraUsageDescription</key>
+	<string>Dayflow can read your facial expression during a voice note to estimate your mood. Frames are analyzed on your Mac and never saved.</string>
 	<key>NSMicrophoneUsageDescription</key>
-	<string>Dayflow listens while you talk to Flow about your plan. Audio is only used for that conversation.</string>
+	<string>Dayflow listens when you talk to Flow about your plan or record a voice note. Voice notes are saved on your Mac.</string>
+	<key>NSSpeechRecognitionUsageDescription</key>
+	<string>Dayflow transcribes your voice notes so you can read them back and turn them into meeting notes.</string>
 	<key>NSScreenCaptureUsageDescription</key>
 	<string>Dayflow uses screen access to create your timeline. Recordings stay on your Mac and you can pause or delete them anytime.</string>
 	<key>PHPostHogApiKey</key>
