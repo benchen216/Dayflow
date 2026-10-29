@@ -2,8 +2,9 @@
 //  FaceExpressionMonitor.swift
 //  Dayflow
 //
-//  Samples the camera every few seconds and measures facial geometry with Vision.
-//  Frames are analyzed in memory and dropped; nothing from the camera is saved
+//  Samples the camera a couple of times a second, finds the face with Vision, and reads
+//  the expression with the Core ML model when it's installed (otherwise it measures facial
+//  geometry). Frames are analyzed in memory and dropped; nothing from the camera is saved
 //  or sent anywhere.
 //
 
@@ -11,14 +12,21 @@ import AVFoundation
 import Vision
 
 final class FaceExpressionMonitor: NSObject, @unchecked Sendable {
-  static let sampleInterval: TimeInterval = 2
+  static let sampleInterval: TimeInterval = 0.5
 
-  /// Face measurements and when they were taken, called on the main queue.
-  var onMetrics: ((FaceMetrics, Date) -> Void)?
+  /// One analyzed frame, called on the main queue.
+  var onFrame: ((FaceFrame) -> Void)?
+  /// For the live preview.
+  var captureSession: AVCaptureSession { session }
 
+  private let emotionModel: FaceEmotionModel?
   private let session = AVCaptureSession()
   private let queue = DispatchQueue(label: "com.dayflow.voice.face")
   private var lastSample = Date.distantPast
+
+  init(emotionModel: FaceEmotionModel? = nil) {
+    self.emotionModel = emotionModel
+  }
 
   static func requestCameraAccess() async -> Bool {
     switch AVCaptureDevice.authorizationStatus(for: .video) {
@@ -38,7 +46,7 @@ final class FaceExpressionMonitor: NSObject, @unchecked Sendable {
     output.setSampleBufferDelegate(self, queue: queue)
 
     session.beginConfiguration()
-    session.sessionPreset = .low
+    session.sessionPreset = .medium
     guard session.canAddInput(input), session.canAddOutput(output) else {
       session.commitConfiguration()
       throw FaceMonitorError.noCamera
@@ -120,9 +128,23 @@ extension FaceExpressionMonitor: AVCaptureVideoDataOutputSampleBufferDelegate {
     let largest = request.results?.max {
       $0.boundingBox.width * $0.boundingBox.height < $1.boundingBox.width * $1.boundingBox.height
     }
-    guard let face = largest, let metrics = Self.metrics(from: face) else { return }
-    DispatchQueue.main.async { [weak self] in self?.onMetrics?(metrics, now) }
+    let frame = FaceFrame(
+      date: now,
+      faceBox: largest?.boundingBox,
+      emotion: largest.flatMap { emotionModel?.read(pixelBuffer: pixelBuffer, faceBox: $0.boundingBox) },
+      metrics: largest.flatMap { Self.metrics(from: $0) })
+    DispatchQueue.main.async { [weak self] in self?.onFrame?(frame) }
   }
+}
+
+/// What one camera frame showed. `faceBox` is nil when no face was found.
+struct FaceFrame: Equatable, Sendable {
+  let date: Date
+  /// Vision's normalized box, origin at the bottom left.
+  let faceBox: CGRect?
+  /// Set when the Core ML model is installed and a face was found.
+  let emotion: FaceEmotionReading?
+  let metrics: FaceMetrics?
 }
 
 enum FaceMonitorError: LocalizedError {

@@ -175,6 +175,20 @@ struct VoiceNotesView: View {
           String(
             localized: "voiceNotes.cameraHelp",
             defaultValue: "Frames are analyzed on your Mac every 2 seconds and never saved."))
+        Button {
+          if recorder.cameraSession == nil {
+            Task { await recorder.startCameraTest() }
+          } else {
+            recorder.stopCameraTest()
+          }
+        } label: {
+          Label(
+            recorder.cameraSession == nil ? "Test the camera" : "Stop the camera test",
+            systemImage: recorder.cameraSession == nil ? "camera" : "camera.fill")
+        }
+        .buttonStyle(.plain)
+        .font(.custom("Figtree", size: 12))
+        .foregroundColor(theme.textSecondary)
       }
 
       if case .failed(let message) = recorder.state {
@@ -202,6 +216,8 @@ struct VoiceNotesView: View {
   private var detail: some View {
     if recorder.isRecording {
       LiveRecordingView(recorder: recorder)
+    } else if recorder.cameraSession != nil {
+      ScrollView { CameraDebugPanel(recorder: recorder).padding(20) }
     } else if let id = selectedID, let note = store.note(with: id) {
       VoiceNoteDetailView(note: note, onDelete: { selectedID = store.notes.first?.id })
         .id(note.id)
@@ -280,6 +296,7 @@ private struct LiveRecordingView: View {
           .foregroundColor(theme.textSecondary)
           .fixedSize(horizontal: false, vertical: true)
       }
+      CameraDebugPanel(recorder: recorder)
 
       ScrollViewReader { proxy in
         ScrollView {
