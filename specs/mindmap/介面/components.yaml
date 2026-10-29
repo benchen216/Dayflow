@@ -1,0 +1,58 @@
+openapi: 3.1.0
+info:
+  title: Dayflow 共用定義
+  version: 730d6f84b919
+  description: |
+    Dayflow 是 macOS 本機 App，沒有對外的 HTTP API。介面文件只描述 App 對本機 AI agent 開放的寫入通道（見 Dayflow.yaml），以及 App 內的排程與啟動任務。
+
+    x-auth 詞彙：
+    - `本機使用者`：只有同一個 macOS 使用者能連線（寫入通道的檔案權限為 0600）。
+    - `本機使用者＋允許編輯`：另外要求設定中的「允許編輯」為開啟；App 對每個請求都再檢查一次。
+
+    全域慣例：日期為 YYYY-MM-DD，一天以早上 4:00 為界；錯誤以 `{"ok": false, "error": {"code", "message"}}` 回傳。
+  x-scheduled-jobs:
+  - name: 定時分析新的錄製
+    schedule: App 啟動 2 秒後開始，每 60 秒
+    x-sf-rules:
+    - ../功能/AI分析/[功能]⚙定時分析新的錄製.md
+  - name: 自動產生 Daily 站會與 Daily brief
+    schedule: App 啟動時，之後每 5 分鐘
+    x-sf-rules:
+    - ../功能/Daily站會/[功能]⚙自動產生Daily站會.md
+    - ../功能/Daily站會/[功能]⚙產生Daily brief.md
+  - name: 依容量上限清除錄影與縮時影片
+    schedule: App 啟動 1 小時後開始，每小時
+    x-sf-rules:
+    - ../功能/儲存與資料維護/[功能]⚙依容量上限清除錄影.md
+  - name: 資料庫備份
+    schedule: 沒有備份時立即一次；App 啟動 1 小時後開始，每 24 小時
+    x-sf-rules:
+    - ../功能/儲存與資料維護/[功能]⚙資料庫備份與損毀還原.md
+  - name: 資料庫暫存寫入整理
+    schedule: 每 5 分鐘
+    x-sf-rules:
+    - ../功能/儲存與資料維護/[功能]⚙資料庫備份與損毀還原.md
+  - name: 定時暫停到期檢查
+    schedule: 定時暫停期間每秒
+    x-sf-rules:
+    - ../功能/錄製/[功能]暫停錄製.md
+  x-startup-tasks:
+  - name: 開啟資料庫（損毀時從備份還原）、完整性檢查、截短過大的 AI 呼叫紀錄
+    x-sf-rules:
+    - ../功能/儲存與資料維護/[功能]⚙資料庫備份與損毀還原.md
+  - name: 依保存的錄製開關與螢幕錄製權限決定是否開始錄製
+    x-sf-rules:
+    - ../功能/錄製/[機制]螢幕錄製.md
+    - ../功能/錄製/[功能]⚙螢幕錄製權限遺失時停止錄製.md
+  - name: 允許編輯開啟時建立寫入通道；修正過期的 MCP 用戶端設定
+    x-sf-rules:
+    - ../功能/Agent存取/[功能]設定Agent存取.md
+  x-event-listeners:
+  - name: 系統睡眠、喚醒、螢幕鎖定與解鎖、螢幕保護程式
+    x-sf-rules:
+    - ../功能/錄製/[功能]⚙系統睡眠與鎖定時自動暫停.md
+  - name: deep link dayflow://start-recording、stop-recording、referral
+    x-sf-rules:
+    - ../功能/錄製/[功能]開始與停止錄製.md
+    - ../功能/帳號與方案/[功能]兌換與分享推薦碼.md
+paths: {}

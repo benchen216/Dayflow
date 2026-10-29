@@ -1,0 +1,132 @@
+// 錄製與分析（aggregate 詳細模型）：錄到的影格、分析批次、AI 寫下的觀察，以及除錯用的 AI 呼叫紀錄。
+// 本機 SQLite（~/Library/Application Support/Dayflow/chunks.sqlite），所有欄位的狀態值都是字串常數而非資料庫 enum。
+// 時間戳記（*_ts、captured_at）為 Unix 秒。批次刪除時連帶刪除觀察與關聯列（ON DELETE CASCADE）。
+// 規則見 ../功能/錄製/[機制]螢幕錄製.md 與 ../功能/AI分析/[機制]分析批次與活動卡片.md。
+
+Enum analysis_batch_status {
+  pending [note: '已建立，尚未送去分析']
+  processing [note: '分析中；App 中途結束會殘留']
+  analyzed [note: '分析成功（含閒置卡片、沒有觀察）']
+  completed [note: '分析成功並完成後續處理']
+  failed [note: '分析失敗，時間軸上有「處理失敗」卡片']
+  failed_empty [note: '批次沒有影格']
+  skipped_short [note: '頭尾不到 5 分鐘，不分析']
+}
+
+Enum llm_call_status {
+  success
+  failure
+}
+
+Table screenshots {
+  id integer [pk, increment]
+  captured_at integer [not null, note: '擷取時間（Unix 秒）']
+  file_path text [not null, note: '影格所在的壓縮影片片段檔案路徑（舊資料為單張 JPEG）']
+  file_size integer [note: '片段關閉後平均分攤到每張影格的大小（位元組）；片段寫入中為 null']
+  idle_seconds_at_capture integer [note: '擷取當下使用者已多少秒沒有操作鍵盤滑鼠；用於閒置判定']
+  frame_index integer [note: '影格在片段中的位置；null 表示舊版單張 JPEG']
+  is_deleted integer [default: 0, note: '1 = 已因容量清除或片段損毀而刪除']
+  created_at datetime [default: `CURRENT_TIMESTAMP`]
+  indexes { captured_at [name: 'idx_screenshots_captured_at'] }
+  Note: '錄製保存的每一張畫面。容量清除只標記 is_deleted，檔案在沒有任何未刪除影格指向時才刪除。'
+}
+
+Table analysis_batches {
+  id integer [pk, increment]
+  batch_start_ts integer [not null, note: '第一張影格的時間']
+  batch_end_ts integer [not null, note: '最後一張影格的時間']
+  status varchar [not null, default: 'pending', note: 'analysis_batch_status']
+  reason text [note: '失敗時的原始錯誤（使用者看不到），或 idle_shortcut_applied']
+  llm_metadata text
+  detailed_transcription text
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  indexes { status [name: 'idx_analysis_batches_status'] }
+  Note: '約 15 分鐘的連續影格組成的分析單位。依「分析批次與活動卡片」機制轉換狀態。'
+}
+
+Table batch_screenshots {
+  batch_id integer [not null]
+  screenshot_id integer [not null]
+  indexes {
+    (batch_id, screenshot_id) [pk]
+    screenshot_id [name: 'idx_batch_screenshots_screenshot']
+  }
+  Note: '批次與影格的關聯；每張影格只屬於一個批次（由應用程式維持，資料庫未強制）。'
+}
+
+Table observations {
+  id integer [pk, increment]
+  batch_id integer [not null]
+  start_ts integer [not null]
+  end_ts integer [not null]
+  observation text [not null, note: 'AI 對這段時間畫面的文字描述']
+  metadata text
+  llm_model text
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  indexes {
+    batch_id [name: 'idx_observations_batch_id']
+    start_ts [name: 'idx_observations_start_ts']
+    (start_ts, end_ts) [name: 'idx_observations_time_range']
+  }
+  Note: 'AI 讀影格後寫下的觀察。重試或重新處理時先刪除該批的觀察；刪除卡片時刪除與卡片時間重疊的觀察。'
+}
+
+Table llm_calls {
+  id integer [pk, increment]
+  created_at datetime [not null, default: `CURRENT_TIMESTAMP`]
+  batch_id integer [null]
+  call_group_id text [null]
+  attempt integer [not null, default: 1]
+  provider text [not null]
+  model text [null]
+  operation text [not null]
+  status varchar [not null, check: `status IN ('success','failure')`, note: 'llm_call_status']
+  latency_ms integer [null]
+  http_status integer [null]
+  request_method text [null]
+  request_url text [null]
+  request_headers text [null]
+  request_body text [null, note: '超過 64 KB 時於啟動時截短為前 64 KB 並加上原長度標記']
+  response_headers text [null]
+  response_body text [null, note: '同 request_body 的截短規則']
+  error_domain text [null]
+  error_code integer [null]
+  error_message text [null]
+  indexes {
+    created_at [name: 'idx_llm_calls_created']
+    (call_group_id, attempt) [name: 'idx_llm_calls_group']
+    batch_id [name: 'idx_llm_calls_batch']
+  }
+  Note: '除錯用的 AI 呼叫紀錄，只存在本機。batch_id 不設外鍵。'
+}
+
+Table chunks {
+  id integer [pk, increment]
+  start_ts integer [not null]
+  end_ts integer [not null]
+  file_url text [not null]
+  status varchar [not null, default: 'recording']
+  is_deleted integer [default: 0]
+  indexes {
+    status [name: 'idx_chunks_status']
+    start_ts [name: 'idx_chunks_start_ts']
+    (status, start_ts) [name: 'idx_chunks_status_start_ts']
+  }
+  Note: '舊版以影片錄製時的片段，現已改用 screenshots；保留舊資料。（新資料不再寫入）'
+}
+
+Table batch_chunks {
+  batch_id integer [not null]
+  chunk_id integer [not null]
+  indexes {
+    (batch_id, chunk_id) [pk]
+    chunk_id [name: 'idx_batch_chunks_chunk']
+  }
+  Note: '舊版批次與影片片段的關聯。（新資料不再寫入）'
+}
+
+Ref: batch_screenshots.batch_id > analysis_batches.id [delete: cascade]
+Ref: batch_screenshots.screenshot_id > screenshots.id [delete: restrict]
+Ref: observations.batch_id > analysis_batches.id [delete: cascade]
+Ref: batch_chunks.batch_id > analysis_batches.id [delete: cascade]
+Ref: batch_chunks.chunk_id > chunks.id [delete: restrict]

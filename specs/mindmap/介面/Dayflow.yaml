@@ -1,0 +1,366 @@
+openapi: 3.1.0
+info:
+  title: Dayflow API
+  version: 730d6f84b919
+  description: |
+    Dayflow App 對本機 AI agent 開放的寫入通道（agent bridge）。呼叫方是隨附的 `dayflow` 命令列工具與它的 MCP server。
+
+    傳輸方式不是 HTTP：App 在 `~/Library/Application Support/Dayflow/agent.sock` 開一個 Unix domain socket（權限 0600），每次連線送一行 JSON 請求、收一行 JSON 回應後關閉。本文件把每個操作寫成 `POST /{operation}` 以便描述請求與回應；實際請求為
+    `{"protocol_version": 1, "operation": "<操作名稱>", "arguments": {...}}`，
+    成功回應為 `{"ok": true, "data": {...}}`，失敗為 `{"ok": false, "error": {"code", "message"}}`。
+
+    通用錯誤（每個操作都可能）：protocol_error（請求無法解析或超過 1 MB）、protocol_mismatch（協定版本不是 1）、edits_disabled（「允許編輯」關閉）、unknown_operation、internal_error。App 未執行時命令列回報 app_not_running（不是 App 的回應）。
+
+    讀取操作不經過這個通道，命令列與 MCP 直接讀本機資料庫，見「以命令列或 MCP 查詢工作日誌」。
+  x-transport: unix-socket line-delimited JSON
+tags:
+- name: Agent 存取
+paths:
+  /category_add:
+    post:
+      tags:
+      - Agent 存取
+      operationId: Category_add
+      summary: 新增分類
+      description: '依名稱（不分大小寫）檢查重名後新增分類；未給顏色時為 #E5E7EB。成功寫入後記錄寫入紀錄。'
+      security: []
+      x-auth: 本機使用者＋允許編輯
+      x-consumers:
+      - dayflow CLI
+      - dayflow MCP
+      x-sf-rules:
+      - ../功能/Agent存取/[功能]透過Agent修改分類.md
+      x-source:
+        handler: Dayflow/Dayflow/Core/AgentAccess/AgentWriteHandlers.swift:74-93
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: 分類名稱；去掉前後空白後不可空白
+                color:
+                  type: string
+                  description: '6 位十六進位色碼，可省略 #'
+                description:
+                  type: string
+                  description: 分類說明，AI 歸類時參考
+      responses:
+        '200':
+          description: 已建立。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          description: invalid_argument（名稱空白、顏色格式錯誤）或 already_exists（同名分類已存在）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              examples:
+                already_exists:
+                  value:
+                    ok: false
+                    error:
+                      code: already_exists
+                      message: A category named "Work" already exists.
+  /category_update:
+    post:
+      tags:
+      - Agent 存取
+      operationId: Category_update
+      summary: 修改分類的名稱、顏色或說明
+      description: 依名稱找到唯一的分類後，套用 new_name（與原名不同才改）、color、description。改名時既有卡片的分類名稱一併改為新名稱（程式現況尚未實作，見修正清單第
+        3 項）。不檢查新名稱是否與其他分類重複。
+      security: []
+      x-auth: 本機使用者＋允許編輯
+      x-consumers:
+      - dayflow CLI
+      - dayflow MCP
+      x-sf-rules:
+      - ../功能/Agent存取/[功能]透過Agent修改分類.md
+      - ../功能/分類/[功能]修改分類.md#01a186a2-ea43-79c6-a1d6-6ea1b29597ed
+      x-source:
+        handler: Dayflow/Dayflow/Core/AgentAccess/AgentWriteHandlers.swift:95-125
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+                  description: 目前的分類名稱（不分大小寫）
+                new_name:
+                  type: string
+                color:
+                  type: string
+                description:
+                  type: string
+      responses:
+        '200':
+          description: 已修改，message 列出做了哪些變更。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          description: invalid_argument（沒有任何變更、顏色格式錯誤）、not_found、ambiguous。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+  /category_remove:
+    post:
+      tags:
+      - Agent 存取
+      operationId: Category_remove
+      summary: 刪除分類
+      description: 破壞性操作；命令列需確認或 --yes。系統分類（Idle）不能刪除。回傳受影響（仍帶這個分類名稱）的活動數。
+      security: []
+      x-auth: 本機使用者＋允許編輯
+      x-consumers:
+      - dayflow CLI
+      - dayflow MCP
+      x-sf-rules:
+      - ../功能/Agent存取/[功能]透過Agent修改分類.md
+      x-source:
+        handler: Dayflow/Dayflow/Core/AgentAccess/AgentWriteHandlers.swift:127-147
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - name
+              properties:
+                name:
+                  type: string
+      responses:
+        '200':
+          description: 已刪除。
+          content:
+            application/json:
+              schema:
+                type: object
+                required:
+                - message
+                - affected_activities
+                properties:
+                  message:
+                    type: string
+                  affected_activities:
+                    type: integer
+        '400':
+          description: invalid_argument、not_found、ambiguous、permission_denied（系統分類）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+  /activity_update:
+    post:
+      tags:
+      - Agent 存取
+      operationId: Activity_update
+      summary: 修改活動的標題或分類
+      description: 寫入前先驗證所有參數（分類需找得到唯一一個）與活動存在且未刪除，再在同一次寫入中更新標題與分類。程式現況尚未檢查活動是否存在，見修正清單第 2 項。
+      security: []
+      x-auth: 本機使用者＋允許編輯
+      x-consumers:
+      - dayflow CLI
+      - dayflow MCP
+      x-sf-rules:
+      - ../功能/Agent存取/[功能]透過Agent修改或刪除活動.md#01a186ab-b446-7281-aea0-e839b8bd7417
+      - ../功能/Agent存取/[功能]透過Agent修改或刪除活動.md#01a186ab-b44a-72b2-9681-e67f6c37b5d5
+      - ../功能/Agent存取/[功能]透過Agent修改或刪除活動.md#01a186ab-b454-7360-92ec-4e1d4bbc7d4d
+      x-source:
+        handler: Dayflow/Dayflow/Core/AgentAccess/AgentWriteHandlers.swift:151-199
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - record_id
+              properties:
+                record_id:
+                  type: integer
+                  description: 活動編號
+                title:
+                  type: string
+                category:
+                  type: string
+                  description: 分類名稱（不分大小寫）
+      responses:
+        '200':
+          description: 已修改。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          description: invalid_argument（缺 record_id、沒有任何變更）、not_found（活動不存在或已刪除；分類找不到）、ambiguous（分類）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              examples:
+                activity_not_found:
+                  value:
+                    ok: false
+                    error:
+                      code: not_found
+                      message: No activity with ID 214.
+        '500':
+          description: internal_error（資料庫寫入失敗，未做任何修改）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+  /activity_delete:
+    post:
+      tags:
+      - Agent 存取
+      operationId: Activity_delete
+      summary: 刪除活動
+      description: 破壞性操作；命令列需確認或 --yes。活動必須存在且未刪除，否則回覆 not_found；標記刪除並刪除該時段的觀察與縮時影片。程式現況找不到時仍回覆已刪除，見修正清單第
+        2 項。
+      security: []
+      x-auth: 本機使用者＋允許編輯
+      x-consumers:
+      - dayflow CLI
+      - dayflow MCP
+      x-sf-rules:
+      - ../功能/Agent存取/[功能]透過Agent修改或刪除活動.md#01a186ab-b44a-72b2-9681-e67f6c37b5d5
+      - ../功能/Agent存取/[功能]透過Agent修改或刪除活動.md#01a186ab-b454-7360-92ec-4e1d4bbc7d4d
+      x-source:
+        handler: Dayflow/Dayflow/Core/AgentAccess/AgentWriteHandlers.swift:201-212
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - record_id
+              properties:
+                record_id:
+                  type: integer
+      responses:
+        '200':
+          description: 已刪除。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          description: invalid_argument（缺 record_id）、not_found（活動不存在或已刪除）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+  /goal_set:
+    post:
+      tags:
+      - Agent 存取
+      operationId: DayGoal_set
+      summary: 設定某一天的每日目標
+      description: 未給的欄位沿用這一天既有的目標（分心上限再沒有時為 60 分鐘、分類再沒有時為空）；保存為未略過。
+      security: []
+      x-auth: 本機使用者＋允許編輯
+      x-consumers:
+      - dayflow CLI
+      - dayflow MCP
+      x-sf-rules:
+      - ../功能/Agent存取/[功能]透過Agent設定每日目標.md#01a186ab-dd00-774c-aee0-8beae1c15531
+      - ../功能/Agent存取/[功能]透過Agent設定每日目標.md#01a186ab-dd0e-7517-88a1-851a5cd7f75c
+      x-source:
+        handler: Dayflow/Dayflow/Core/AgentAccess/AgentWriteHandlers.swift:218-276
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+              - focus_minutes
+              properties:
+                date:
+                  type: string
+                  description: YYYY-MM-DD；未給時為今天（以 4:00 為界）
+                focus_minutes:
+                  type: integer
+                  minimum: 1
+                distraction_limit_minutes:
+                  type: integer
+                focus_categories:
+                  type: array
+                  items:
+                    type: string
+                distraction_categories:
+                  type: array
+                  items:
+                    type: string
+      responses:
+        '200':
+          description: 已保存。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MessageResult'
+        '400':
+          description: invalid_argument（focus_minutes 不是正整數、date 非文字或空白）、not_found／ambiguous（分類）。
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+components:
+  schemas:
+    MessageResult:
+      type: object
+      required:
+      - message
+      properties:
+        message:
+          type: string
+          description: 給使用者看的結果說明
+    ErrorResult:
+      type: object
+      required:
+      - ok
+      - error
+      properties:
+        ok:
+          const: false
+        error:
+          type: object
+          required:
+          - code
+          - message
+          properties:
+            code:
+              type: string
+              enum:
+              - protocol_error
+              - protocol_mismatch
+              - edits_disabled
+              - unknown_operation
+              - invalid_argument
+              - not_found
+              - ambiguous
+              - already_exists
+              - permission_denied
+              - internal_error
+            message:
+              type: string
