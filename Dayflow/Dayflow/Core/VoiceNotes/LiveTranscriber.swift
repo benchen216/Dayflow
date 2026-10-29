@@ -15,7 +15,7 @@
 import AVFoundation
 import Speech
 
-final class LiveTranscriber: @unchecked Sendable {
+final class LiveTranscriber: SpeechTranscribing, @unchecked Sendable {
   static let preferredSegmentSeconds: TimeInterval = 20
   static let maxSegmentSeconds: TimeInterval = 50
   /// Silence after speech that closes the current utterance.
@@ -25,6 +25,8 @@ final class LiveTranscriber: @unchecked Sendable {
   var onPartial: ((String) -> Void)?
   var onSegment: ((TranscriptSegment) -> Void)?
   var onError: ((String) -> Void)?
+  /// Apple's recognizer doesn't report emotion.
+  var onVoiceEmotion: ((EmotionSample) -> Void)?
 
   private let recognizer: SFSpeechRecognizer
   private let sampleRate: Double
@@ -95,6 +97,11 @@ final class LiveTranscriber: @unchecked Sendable {
     defer { lock.unlock() }
     isStopped = true
     finishSegmentLocked()
+  }
+
+  /// The last segment's final result arrives shortly after the request ends.
+  func finish() async {
+    try? await Task.sleep(nanoseconds: 1_200_000_000)
   }
 
   private func beginSegmentLocked() {

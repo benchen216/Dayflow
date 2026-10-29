@@ -1604,6 +1604,266 @@
         }
       }
     },
+    "voiceNotes.engine" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Spracherkennung"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Speech engine"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Moteur vocal"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "音声認識エンジン"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "음성 엔진"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Движок речи"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "语音引擎"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "語音引擎"
+          }
+        }
+      }
+    },
+    "voiceNotes.engine.apple" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apple"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Apple"
+          }
+        }
+      }
+    },
+    "voiceNotes.engine.senseVoice" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice (lokal)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SenseVoice (local)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice (local)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice（ローカル）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice (로컬)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice (локально)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice（本机）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice（本機）"
+          }
+        }
+      }
+    },
+    "voiceNotes.engineHelp" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice läuft auf diesem Mac und erkennt auch Emotionen in deiner Stimme. Es versteht Chinesisch, Kantonesisch, Englisch, Japanisch und Koreanisch."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "SenseVoice runs on this Mac and also hears emotion in your voice. It knows Chinese, Cantonese, English, Japanese and Korean."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice fonctionne sur ce Mac et perçoit aussi les émotions dans votre voix. Il comprend le chinois, le cantonais, l’anglais, le japonais et le coréen."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice はこの Mac 上で動作し、声の感情も読み取ります。中国語、広東語、英語、日本語、韓国語に対応しています。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice는 이 Mac에서 실행되며 목소리의 감정도 파악합니다. 중국어, 광둥어, 영어, 일본어, 한국어를 지원합니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice работает на этом Mac и распознаёт эмоции в голосе. Поддерживает китайский, кантонский, английский, японский и корейский."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice 在这台 Mac 上运行，还能听出声音里的情绪。支持中文、粤语、英语、日语和韩语。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice 在這台 Mac 上執行，還能聽出聲音裡的情緒。支援中文、粵語、英語、日語和韓語。"
+          }
+        }
+      }
+    },
+    "voiceNotes.notice.senseVoiceFailed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Das lokale SenseVoice-Modell konnte nicht starten, daher wird die Apple-Spracherkennung verwendet."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The local SenseVoice model couldn't start, so Apple speech recognition is used instead."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Le modèle SenseVoice local n'a pas pu démarrer, la reconnaissance vocale d'Apple est utilisée à la place."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ローカルの SenseVoice モデルを起動できなかったため、Apple の音声認識を使用します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "로컬 SenseVoice 모델을 시작하지 못해 Apple 음성 인식을 대신 사용합니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Локальная модель SenseVoice не запустилась, поэтому используется распознавание речи Apple."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "本机的 SenseVoice 模型无法启动，改用 Apple 语音识别。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "本機的 SenseVoice 模型無法啟動，改用 Apple 語音辨識。"
+          }
+        }
+      }
+    },
     "voiceNotes.language" : {
       "localizations" : {
         "de" : {

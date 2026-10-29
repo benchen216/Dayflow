@@ -28,7 +28,6 @@ final class VoiceNoteRecorder: ObservableObject {
   @Published private(set) var voiceMood: EmotionLabel?
   @Published private(set) var faceMood: EmotionLabel?
   @Published private(set) var transcriptionNotice: String?
-
   var isRecording: Bool {
     if case .recording = state { return true }
     return false
@@ -42,7 +41,9 @@ final class VoiceNoteRecorder: ObservableObject {
   private var voiceBaseline = VoiceBaseline()
   private var faceBaseline = FaceBaseline()
   private var captureEngine: VoiceCaptureEngine?
-  private var transcriber: LiveTranscriber?
+  private var transcriber: SpeechTranscribing?
+  /// The speech engine reports the voice mood itself, so the loudness/pitch estimate is skipped.
+  private var usesModelVoiceEmotion = false
   private var faceMonitor: FaceExpressionMonitor?
 
   init(store: VoiceNoteStore = .shared) {
@@ -102,7 +103,7 @@ final class VoiceNoteRecorder: ObservableObject {
     captureEngine = nil
 
     // The last segment's final result arrives shortly after the request ends.
-    try? await Task.sleep(nanoseconds: 1_200_000_000)
+    await transcriber?.finish()
     transcriber = nil
 
     var segments = committedTranscript.sorted { $0.offset < $1.offset }
@@ -149,7 +150,26 @@ final class VoiceNoteRecorder: ObservableObject {
     return false
   }
 
-  private func makeTranscriber() async -> LiveTranscriber? {
+  private func makeTranscriber() async -> SpeechTranscribing? {
+    let locale = SpeechLanguage.locale(
+      for: UserDefaults.standard.string(forKey: SpeechLanguage.preferenceKey)
+        ?? SpeechLanguage.followApp)
+
+    if SpeechEngine.selected == .senseVoice {
+      do {
+        let transcriber = try await SenseVoiceTranscriber.make(
+          sampleRate: VoiceCaptureEngine.sampleRate, locale: locale)
+        usesModelVoiceEmotion = true
+        connect(transcriber)
+        return transcriber
+      } catch {
+        print("[VoiceNotes] SenseVoice unavailable, using Apple speech recognition: \(error)")
+        transcriptionNotice = String(
+          localized: "voiceNotes.notice.senseVoiceFailed",
+          defaultValue: "The local SenseVoice model couldn't start, so Apple speech recognition is used instead.")
+      }
+    }
+
     guard await LiveTranscriber.requestAuthorization() else {
       transcriptionNotice = String(
         localized: "voiceNotes.notice.speechDenied",
@@ -158,10 +178,7 @@ final class VoiceNoteRecorder: ObservableObject {
       return nil
     }
     guard let transcriber = LiveTranscriber(
-        sampleRate: VoiceCaptureEngine.sampleRate,
-        locale: SpeechLanguage.locale(
-          for: UserDefaults.standard.string(forKey: SpeechLanguage.preferenceKey)
-            ?? SpeechLanguage.followApp)) else {
+        sampleRate: VoiceCaptureEngine.sampleRate, locale: locale) else {
       transcriptionNotice = String(
         localized: "voiceNotes.notice.speechUnavailable",
         defaultValue: "Speech recognition isn't available for your language right now.")
@@ -173,6 +190,11 @@ final class VoiceNoteRecorder: ObservableObject {
         defaultValue: "Your language isn't supported for on-device recognition, so Apple's speech service transcribes this recording."
       )
     }
+    connect(transcriber)
+    return transcriber
+  }
+
+  private func connect(_ transcriber: SpeechTranscribing) {
     transcriber.onPartial = { [weak self] text in
       DispatchQueue.main.async { self?.partialTranscript = text }
     }
@@ -183,10 +205,16 @@ final class VoiceNoteRecorder: ObservableObject {
         self.partialTranscript = ""
       }
     }
+    transcriber.onVoiceEmotion = { [weak self] sample in
+      DispatchQueue.main.async {
+        guard let self, self.isRecording else { return }
+        self.emotions.append(sample)
+        self.voiceMood = sample.label
+      }
+    }
     transcriber.onError = { message in
       print("[VoiceNotes] Speech recognition error: \(message)")
     }
-    return transcriber
   }
 
   private func startCamera() async {
@@ -222,12 +250,13 @@ final class VoiceNoteRecorder: ObservableObject {
     voiceMood = nil
     faceMood = nil
     transcriptionNotice = nil
+    usesModelVoiceEmotion = false
   }
 
   // MARK: - Mood
 
   private func handleVoice(_ features: VoiceFeatures, offset: TimeInterval) {
-    guard isRecording else { return }
+    guard isRecording, !usesModelVoiceEmotion else { return }
     // Estimate against the baseline before this window joins it.
     if let estimate = VoiceEmotionEstimator.estimate(features, baseline: voiceBaseline) {
       emotions.append(

@@ -22,7 +22,7 @@ final class VoiceCaptureEngine: @unchecked Sendable {
 
   private let engine = AVAudioEngine()
   private let outputFormat: AVAudioFormat
-  private let transcriber: LiveTranscriber?
+  private let transcriber: SpeechTranscribing?
   private let analysisQueue = DispatchQueue(label: "com.dayflow.voice.analysis")
   private var converter: AVAudioConverter?
   private var file: AVAudioFile?
@@ -42,7 +42,7 @@ final class VoiceCaptureEngine: @unchecked Sendable {
   private let speechLock = NSLock()
   private var speechActive = false
 
-  init(transcriber: LiveTranscriber?) {
+  init(transcriber: SpeechTranscribing?) {
     self.transcriber = transcriber
     outputFormat = AVAudioFormat(
       commonFormat: .pcmFormatFloat32, sampleRate: Self.sampleRate, channels: 1,

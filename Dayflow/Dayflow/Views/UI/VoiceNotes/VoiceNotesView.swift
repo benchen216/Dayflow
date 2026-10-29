@@ -7,6 +7,7 @@ struct VoiceNotesView: View {
   @ObservedObject private var recorder = VoiceNoteRecorder.shared
   @AppStorage(VoiceNoteRecorder.cameraPreferenceKey) private var useCamera = false
   @AppStorage(SpeechLanguage.preferenceKey) private var speechLanguage = SpeechLanguage.followApp
+  @AppStorage(SpeechEngine.preferenceKey) private var speechEngine = SpeechEngine.apple.rawValue
   @State private var selectedID: UUID?
 
   var body: some View {
@@ -73,6 +74,31 @@ struct VoiceNotesView: View {
     .padding(20)
   }
 
+  /// Only offered once the local model files are in place.
+  private var enginePicker: some View {
+    HStack(spacing: 8) {
+      Text(String(localized: "voiceNotes.engine", defaultValue: "Speech engine"))
+        .font(.custom("Figtree", size: 12))
+        .foregroundColor(theme.textSecondary)
+      Spacer(minLength: 0)
+      Picker("", selection: $speechEngine) {
+        Text(String(localized: "voiceNotes.engine.apple", defaultValue: "Apple"))
+          .tag(SpeechEngine.apple.rawValue)
+        Text(String(localized: "voiceNotes.engine.senseVoice", defaultValue: "SenseVoice (local)"))
+          .tag(SpeechEngine.senseVoice.rawValue)
+      }
+      .labelsHidden()
+      .controlSize(.small)
+      .fixedSize()
+    }
+    .help(
+      String(
+        localized: "voiceNotes.engineHelp",
+        defaultValue:
+          "SenseVoice runs on this Mac and also hears emotion in your voice. It knows Chinese, Cantonese, English, Japanese and Korean."
+      ))
+  }
+
   private var languagePicker: some View {
     HStack(spacing: 8) {
       Text(String(localized: "voiceNotes.language", defaultValue: "Speech language"))
@@ -134,6 +160,7 @@ struct VoiceNotesView: View {
         }
         .buttonStyle(VoicePillButtonStyle(prominent: true))
         languagePicker
+        if SenseVoiceRuntime.isInstalled() { enginePicker }
         Toggle(isOn: $useCamera) {
           Text(
             String(
