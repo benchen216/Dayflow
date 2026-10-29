@@ -37,3 +37,7 @@ tools/dayflow-cli/.build/
 
 # graphify knowledge graph output
 graphify-out/
+
+# local secrets
+.env.local
+.env.local.swp
