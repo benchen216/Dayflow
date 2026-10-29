@@ -28,6 +28,10 @@ final class VoiceNoteRecorder: ObservableObject {
   @Published private(set) var voiceMood: EmotionLabel?
   @Published private(set) var faceMood: EmotionLabel?
   @Published private(set) var transcriptionNotice: String?
+  /// The latest camera frame's result, for the on-screen face check.
+  @Published private(set) var faceFrame: FaceFrame?
+  /// Set while the camera is on, either recording or just testing it.
+  @Published private(set) var cameraSession: AVCaptureSession?
 
   var isRecording: Bool {
     if case .recording = state { return true }
@@ -42,8 +46,13 @@ final class VoiceNoteRecorder: ObservableObject {
   private var voiceBaseline = VoiceBaseline()
   private var faceBaseline = FaceBaseline()
   private var captureEngine: VoiceCaptureEngine?
-  private var transcriber: LiveTranscriber?
+  private var transcriber: SpeechTranscribing?
+  /// The speech engine reports the voice mood itself, so the loudness/pitch estimate is skipped.
+  private var usesModelVoiceEmotion = false
   private var faceMonitor: FaceExpressionMonitor?
+  private var lastStoredFace = Date.distantPast
+  /// Face results are stored this often; the camera is read more often so the preview feels live.
+  private static let faceSampleSeconds: TimeInterval = 2
 
   init(store: VoiceNoteStore = .shared) {
     self.store = store
@@ -53,6 +62,7 @@ final class VoiceNoteRecorder: ObservableObject {
 
   func start(useCamera: Bool) async {
     guard state == .idle || isFailed else { return }
+    stopCamera()
     state = .starting
     resetSession()
 
@@ -95,14 +105,13 @@ final class VoiceNoteRecorder: ObservableObject {
   @discardableResult
   func stop() async -> UUID? {
     guard isRecording, let id = noteID, let engine = captureEngine else { return nil }
-    faceMonitor?.stop()
-    faceMonitor = nil
+    stopCamera()
     let result = engine.stop()
     let duration = result.duration
     captureEngine = nil
 
     // The last segment's final result arrives shortly after the request ends.
-    try? await Task.sleep(nanoseconds: 1_200_000_000)
+    await transcriber?.finish()
     transcriber = nil
 
     var segments = committedTranscript.sorted { $0.offset < $1.offset }
@@ -149,7 +158,26 @@ final class VoiceNoteRecorder: ObservableObject {
     return false
   }
 
-  private func makeTranscriber() async -> LiveTranscriber? {
+  private func makeTranscriber() async -> SpeechTranscribing? {
+    let locale = SpeechLanguage.locale(
+      for: UserDefaults.standard.string(forKey: SpeechLanguage.preferenceKey)
+        ?? SpeechLanguage.followApp)
+
+    if SpeechEngine.selected == .senseVoice {
+      do {
+        let transcriber = try await SenseVoiceTranscriber.make(
+          sampleRate: VoiceCaptureEngine.sampleRate, locale: locale)
+        usesModelVoiceEmotion = true
+        connect(transcriber)
+        return transcriber
+      } catch {
+        print("[VoiceNotes] SenseVoice unavailable, using Apple speech recognition: \(error)")
+        transcriptionNotice = String(
+          localized: "voiceNotes.notice.senseVoiceFailed",
+          defaultValue: "The local SenseVoice model couldn't start, so Apple speech recognition is used instead.")
+      }
+    }
+
     guard await LiveTranscriber.requestAuthorization() else {
       transcriptionNotice = String(
         localized: "voiceNotes.notice.speechDenied",
@@ -158,10 +186,7 @@ final class VoiceNoteRecorder: ObservableObject {
       return nil
     }
     guard let transcriber = LiveTranscriber(
-        sampleRate: VoiceCaptureEngine.sampleRate,
-        locale: SpeechLanguage.locale(
-          for: UserDefaults.standard.string(forKey: SpeechLanguage.preferenceKey)
-            ?? SpeechLanguage.followApp)) else {
+        sampleRate: VoiceCaptureEngine.sampleRate, locale: locale) else {
       transcriptionNotice = String(
         localized: "voiceNotes.notice.speechUnavailable",
         defaultValue: "Speech recognition isn't available for your language right now.")
@@ -173,6 +198,11 @@ final class VoiceNoteRecorder: ObservableObject {
         defaultValue: "Your language isn't supported for on-device recognition, so Apple's speech service transcribes this recording."
       )
     }
+    connect(transcriber)
+    return transcriber
+  }
+
+  private func connect(_ transcriber: SpeechTranscribing) {
     transcriber.onPartial = { [weak self] text in
       DispatchQueue.main.async { self?.partialTranscript = text }
     }
@@ -183,10 +213,27 @@ final class VoiceNoteRecorder: ObservableObject {
         self.partialTranscript = ""
       }
     }
+    transcriber.onVoiceEmotion = { [weak self] sample in
+      DispatchQueue.main.async {
+        guard let self, self.isRecording else { return }
+        self.emotions.append(sample)
+        self.voiceMood = sample.label
+      }
+    }
     transcriber.onError = { message in
       print("[VoiceNotes] Speech recognition error: \(message)")
     }
-    return transcriber
+  }
+
+  /// Turns the camera on without recording, so the face check can be watched first.
+  func startCameraTest() async {
+    guard state == .idle || isFailed, faceMonitor == nil else { return }
+    await startCamera()
+  }
+
+  func stopCameraTest() {
+    guard !isRecording else { return }
+    stopCamera()
   }
 
   private func startCamera() async {
@@ -196,17 +243,27 @@ final class VoiceNoteRecorder: ObservableObject {
         defaultValue: "Camera access is off, so mood comes from your voice only.")
       return
     }
-    let monitor = FaceExpressionMonitor()
-    monitor.onMetrics = { [weak self] metrics, date in
-      self?.handleFace(metrics, at: date)
+    let emotionModel = await Task.detached { try? FaceEmotionModel() }.value
+    let monitor = FaceExpressionMonitor(emotionModel: emotionModel)
+    monitor.onFrame = { [weak self] frame in
+      self?.faceFrame = frame
+      self?.handleFace(frame)
     }
     do {
       try monitor.start()
       faceMonitor = monitor
+      cameraSession = monitor.captureSession
       usedCamera = true
     } catch {
       transcriptionNotice = error.localizedDescription
     }
+  }
+
+  private func stopCamera() {
+    faceMonitor?.stop()
+    faceMonitor = nil
+    cameraSession = nil
+    faceFrame = nil
   }
 
   private func resetSession() {
@@ -221,13 +278,15 @@ final class VoiceNoteRecorder: ObservableObject {
     level = -160
     voiceMood = nil
     faceMood = nil
+    lastStoredFace = .distantPast
     transcriptionNotice = nil
+    usesModelVoiceEmotion = false
   }
 
   // MARK: - Mood
 
   private func handleVoice(_ features: VoiceFeatures, offset: TimeInterval) {
-    guard isRecording else { return }
+    guard isRecording, !usesModelVoiceEmotion else { return }
     // Estimate against the baseline before this window joins it.
     if let estimate = VoiceEmotionEstimator.estimate(features, baseline: voiceBaseline) {
       emotions.append(
@@ -240,16 +299,27 @@ final class VoiceNoteRecorder: ObservableObject {
     }
   }
 
-  private func handleFace(_ metrics: FaceMetrics, at date: Date) {
-    guard isRecording, let startedAt else { return }
-    if let estimate = FaceEmotionEstimator.estimate(metrics, baseline: faceBaseline) {
+  private func handleFace(_ frame: FaceFrame) {
+    guard isRecording, let startedAt,
+      frame.date.timeIntervalSince(lastStoredFace) >= Self.faceSampleSeconds
+    else { return }
+    lastStoredFace = frame.date
+    let offset = frame.date.timeIntervalSince(startedAt)
+
+    if let emotion = frame.emotion {
       emotions.append(
         EmotionSample(
-          offset: date.timeIntervalSince(startedAt), source: .face, label: estimate.label,
-          confidence: estimate.confidence))
-      faceMood = estimate.label
+          offset: offset, source: .face, label: emotion.label, confidence: emotion.confidence))
+      faceMood = emotion.label
+    } else if let metrics = frame.metrics {
+      if let estimate = FaceEmotionEstimator.estimate(metrics, baseline: faceBaseline) {
+        emotions.append(
+          EmotionSample(
+            offset: offset, source: .face, label: estimate.label, confidence: estimate.confidence))
+        faceMood = estimate.label
+      }
+      faceBaseline = faceBaseline.adding(metrics)
     }
-    faceBaseline = faceBaseline.adding(metrics)
   }
 
   private func defaultTitle(for date: Date) -> String {

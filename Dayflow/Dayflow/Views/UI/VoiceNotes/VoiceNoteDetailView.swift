@@ -15,7 +15,7 @@ struct VoiceNoteDetailView: View {
   @State private var titleDraft: String
   @State private var confirmingDelete = false
   @State private var actionError: String?
-  @AppStorage("voiceNotesSkipSilence") private var skipsSilence = true
+  @AppStorage("voiceNotesSkipSilence") private var skipsSilence = false
 
   let note: VoiceNote
   let onDelete: () -> Void
