@@ -56,7 +56,7 @@ enum DailyBriefGenerator {
   /// allows them, and blocks the ones that change data.
   static let dayflowReadTools = [
     "get_time_breakdown", "get_timeline", "get_activity_detail", "search_activities",
-    "get_daily", "get_weekly", "list_categories", "get_status",
+    "get_daily", "get_weekly", "list_categories", "get_status", "get_phone_usage",
   ]
 
   /// The built-in prompt with its `{{PLACEHOLDERS}}` intact. The override editor starts from it.

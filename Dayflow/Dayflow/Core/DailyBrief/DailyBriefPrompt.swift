@@ -112,6 +112,8 @@ enum DailyBriefPrompt {
 
     - **Dayflow tools** (`mcp__dayflow__*`): read older history, such as the last 2 weeks of timeline, search
       for an activity, or get the time breakdown. Use them to tell a one-off from an ongoing project.
+      `get_phone_usage` adds the user's iPhone/iPad Screen Time when they've turned it on; it can be
+      hours behind, so don't treat a gap after its `last_synced_at` as time off the phone.
     - **Their connectors** (whatever tools are available besides Dayflow's, e.g. Slack, Linear, Gmail,
       Notion, Google Drive): read only. You can search and read; you cannot send, post, create, or edit
       anything, and those calls will be refused. If no connectors are available, skip the sections

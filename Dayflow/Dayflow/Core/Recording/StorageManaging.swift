@@ -61,6 +61,10 @@ protocol StorageManaging: Sendable {
   func fetchMostRecentDayGoalPlan(beforeOrOn day: String) -> DayGoalPlan?
   func saveDayGoalPlan(_ plan: DayGoalPlan)
 
+  // Screen Time from other devices
+  func fetchDeviceAppSessions(from start: Date, to end: Date) -> [DeviceAppSession]
+  func fetchUsageDevices() -> [UsageDevice]
+
   func fetchRecentLLMCallsForDebug(limit: Int) -> [LLMCallDebugEntry]
   func fetchRecentAnalysisBatchesForDebug(limit: Int) -> [AnalysisBatchDebugEntry]
   func fetchLLMCallsForBatches(batchIds: [Int64], limit: Int) -> [LLMCallDebugEntry]

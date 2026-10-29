@@ -195,3 +195,74 @@ func fetchStatus(db: Database, path: String) throws -> StatusInfo {
     today: dayWindow(containing: Date()).dayKey
   )
 }
+
+// MARK: - Screen Time from other devices
+
+/// One app session on the user's iPhone or iPad, imported by the app from
+/// Biome into device_app_sessions. Mirrors DeviceAppSession in the app.
+struct DeviceSession {
+  let deviceId: String
+  let bundleId: String
+  let start: Date
+  let end: Date
+}
+
+struct DeviceInfo {
+  let deviceId: String
+  let model: String?
+  let lastEventAt: Date?
+
+  var kind: String {
+    guard let model else { return "other" }
+    if model.hasPrefix("iPhone") { return "iPhone" }
+    if model.hasPrefix("iPad") { return "iPad" }
+    return "other"
+  }
+}
+
+/// Sessions overlapping [from, to), or nil when this database predates the
+/// device usage tables (the app hasn't been updated or launched since).
+func fetchDeviceSessions(db: Database, from: Date, to: Date) throws -> [DeviceSession]? {
+  guard try hasTable(db: db, name: "device_app_sessions") else { return nil }
+  return try db.query(
+    """
+    SELECT device_id, bundle_id, start_ts, end_ts FROM device_app_sessions
+    WHERE start_ts < ? AND end_ts > ?
+    ORDER BY start_ts ASC
+    """,
+    [
+      .integer(Int64(to.timeIntervalSince1970)),
+      .integer(Int64(from.timeIntervalSince1970)),
+    ]
+  ).compactMap { row in
+    guard let deviceId = row.string("device_id"), let bundleId = row.string("bundle_id"),
+      let startTs = row.int("start_ts"), let endTs = row.int("end_ts")
+    else { return nil }
+    return DeviceSession(
+      deviceId: deviceId,
+      bundleId: bundleId,
+      start: max(from, Date(timeIntervalSince1970: TimeInterval(startTs))),
+      end: min(to, Date(timeIntervalSince1970: TimeInterval(endTs)))
+    )
+  }
+}
+
+func fetchDevices(db: Database) throws -> [DeviceInfo] {
+  guard try hasTable(db: db, name: "device_usage_devices") else { return [] }
+  return try db.query(
+    "SELECT device_id, model, last_event_ts FROM device_usage_devices ORDER BY device_id"
+  ).compactMap { row in
+    guard let deviceId = row.string("device_id") else { return nil }
+    return DeviceInfo(
+      deviceId: deviceId,
+      model: row.string("model"),
+      lastEventAt: row.int("last_event_ts").map { Date(timeIntervalSince1970: TimeInterval($0)) }
+    )
+  }
+}
+
+private func hasTable(db: Database, name: String) throws -> Bool {
+  try !db.query(
+    "SELECT name FROM sqlite_master WHERE type = 'table' AND name = ?", [.text(name)]
+  ).isEmpty
+}

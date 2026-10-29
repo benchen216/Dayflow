@@ -66,6 +66,9 @@ struct DaySummaryView: View {
   @State private var reviewLoadTask: Task<Void, Never>?
   @State private var categoryStatsTask: Task<Void, Never>?
   @State private var dataLoadToken: DaySummaryLoadToken?
+  @State private var phoneUsageSummary = DeviceUsageDaySummary.empty
+  @State private var phoneUsageLoadTask: Task<Void, Never>?
+  @ObservedObject private var deviceUsageService = DeviceUsageSyncService.shared
   @State private var reviewLoadToken: DaySummaryLoadToken?
   @State private var categoryStatsToken: DaySummaryLoadToken?
 
@@ -164,6 +167,12 @@ struct DaySummaryView: View {
           sectionDivider
 
           distractionsSection
+
+          if DeviceUsagePreferences.isEnabled {
+            sectionDivider
+
+            phoneUsageSection
+          }
         }
         .frame(width: Design.contentWidth, alignment: .leading)
         .padding(.top, Design.topPadding)
@@ -183,12 +192,19 @@ struct DaySummaryView: View {
     .frame(maxWidth: .infinity, maxHeight: .infinity)
     .onAppear {
       loadData()
+      loadPhoneUsage()
     }
     .onDisappear {
       cancelLoadTasks()
+      phoneUsageLoadTask?.cancel()
+      phoneUsageLoadTask = nil
     }
     .onChange(of: selectedDate) {
       loadData()
+      loadPhoneUsage()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .deviceUsageDataUpdated)) { _ in
+      loadPhoneUsage()
     }
     .onChange(of: goalPromptDay) {
       handleGoalPromptIfReady()
@@ -316,6 +332,33 @@ struct DaySummaryView: View {
         self.goalSetupReferenceStats = setupReferenceStats
         self.handleGoalPromptIfReady()
         self.dataLoadTask = nil
+      }
+    }
+  }
+
+  private func loadPhoneUsage() {
+    phoneUsageLoadTask?.cancel()
+    guard DeviceUsagePreferences.isEnabled else {
+      phoneUsageSummary = .empty
+      return
+    }
+
+    let dayInfo = timelineDayInfo
+    let loadToken = DaySummaryLoadToken(dayString: dayInfo.dayString)
+    let storageManager = storageManager
+    phoneUsageLoadTask = Task.detached(priority: .utility) {
+      let summary = DeviceUsageSummaryBuilder.daySummary(
+        sessions: storageManager.fetchDeviceAppSessions(
+          from: dayInfo.startOfDay, to: dayInfo.endOfDay),
+        dayStart: dayInfo.startOfDay,
+        dayEnd: dayInfo.endOfDay,
+        devices: storageManager.fetchUsageDevices()
+      )
+      guard !Task.isCancelled else { return }
+      await MainActor.run {
+        guard loadToken.dayString == self.timelineDayInfo.dayString else { return }
+        self.phoneUsageSummary = summary
+        self.phoneUsageLoadTask = nil
       }
     }
   }
@@ -549,6 +592,14 @@ struct DaySummaryView: View {
       onDoneEditing: {
         isEditingDistractionCategories = false
       }
+    )
+  }
+
+  private var phoneUsageSection: some View {
+    DayPhoneUsageSection(
+      summary: phoneUsageSummary,
+      macCapturedTime: totalCapturedTime,
+      access: deviceUsageService.access
     )
   }
 

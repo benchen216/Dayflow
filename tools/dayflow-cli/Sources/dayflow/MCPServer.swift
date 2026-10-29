@@ -158,6 +158,18 @@ private func toolDefinitions() -> [[String: Any]] {
       "annotations": ["readOnlyHint": true, "idempotentHint": true],
     ],
     [
+      "name": "get_phone_usage",
+      "description":
+        "Screen Time from the user's iPhone and iPad (synced through iCloud, so often hours behind): total minutes, pickups, minutes per app (iOS bundle IDs), and per-hour minutes for a single day. Use alongside get_time_breakdown, which only covers the Mac. Pass date for one day, or from/to for a range.",
+      "inputSchema": schema(
+        [
+          "date": dateProperty,
+          "from": ["type": "string", "description": "Range start day, YYYY-MM-DD."],
+          "to": ["type": "string", "description": "Range end day, YYYY-MM-DD."],
+        ]),
+      "annotations": ["readOnlyHint": true, "idempotentHint": true],
+    ],
+    [
       "name": "list_categories",
       "description": "The user's timeline categories with colors.",
       "inputSchema": schema([:]),
@@ -288,6 +300,8 @@ private func callTool(name: String, arguments: [String: Any]) -> [String: Any] {
       return try runDailyTool(arguments)
     case "get_weekly":
       return try runWeeklyTool(arguments)
+    case "get_phone_usage":
+      return try runPhoneUsageTool(arguments)
     case "list_categories":
       return toolResult([
         "categories": loadCategories().map {
@@ -440,6 +454,113 @@ private func runWeeklyTool(_ arguments: [String: Any]) throws -> [String: Any] {
       ] as [String: Any]
     },
   ])
+}
+
+/// Mirrors DeviceUsageSummaryBuilder in the app: a session starting at least
+/// this long after the previous one on the same device is a new pickup.
+private let phonePickupGap: TimeInterval = 60
+
+private func runPhoneUsageTool(_ arguments: [String: Any]) throws -> [String: Any] {
+  let from: DayWindow
+  let to: DayWindow
+  if let fromKey = arguments["from"] as? String, let toKey = arguments["to"] as? String {
+    guard let fromWindow = dayWindow(forKey: fromKey), let toWindow = dayWindow(forKey: toKey),
+      fromWindow.start <= toWindow.start
+    else {
+      return toolError(
+        "from and to must be YYYY-MM-DD, with from first.", failureCategory: "invalid_input")
+    }
+    (from, to) = (fromWindow, toWindow)
+  } else {
+    guard let window = resolveWindow(arguments) else {
+      return toolError("Invalid date. Use YYYY-MM-DD.", failureCategory: "invalid_input")
+    }
+    (from, to) = (window, window)
+  }
+
+  let db = try openDB()
+  guard let sessions = try fetchDeviceSessions(db: db, from: from.start, to: to.end) else {
+    return toolError(
+      "Phone usage isn't set up. The user can turn on iPhone Screen Time in Dayflow → Settings → Export.",
+      failureCategory: "unavailable"
+    )
+  }
+  let devices = try fetchDevices(db: db)
+  if devices.isEmpty {
+    return toolError(
+      "No iPhone or iPad data imported yet. The user needs to turn on iPhone Screen Time in Dayflow → Settings → Export, grant Full Disk Access, and have Screen Time's Share Across Devices on.",
+      failureCategory: "unavailable"
+    )
+  }
+
+  var appSeconds: [String: TimeInterval] = [:]
+  var appSessions: [String: Int] = [:]
+  var hourly = [TimeInterval](repeating: 0, count: 24)
+  var pickups = 0
+  var lastEndByDevice: [String: Date] = [:]
+  let isSingleDay = from.dayKey == to.dayKey
+
+  for session in sessions where session.end > session.start {
+    let duration = session.end.timeIntervalSince(session.start)
+    appSeconds[session.bundleId, default: 0] += duration
+    appSessions[session.bundleId, default: 0] += 1
+    if let lastEnd = lastEndByDevice[session.deviceId],
+      session.start.timeIntervalSince(lastEnd) < phonePickupGap
+    {
+      // Switched apps without putting the device down.
+    } else {
+      pickups += 1
+    }
+    lastEndByDevice[session.deviceId] = max(lastEndByDevice[session.deviceId] ?? session.end, session.end)
+
+    if isSingleDay {
+      // Hour slots are wall-clock hours in Dayflow-day order: index 0 is 4 AM.
+      // On a DST change the repeated hour folds into the same slot.
+      let calendar = Calendar.current
+      var cursor = session.start
+      while cursor < session.end {
+        let hour = calendar.component(.hour, from: cursor)
+        let slot = (hour + 20) % 24
+        let hourStart = calendar.dateInterval(of: .hour, for: cursor)?.start ?? cursor
+        let slotEnd = hourStart.addingTimeInterval(3600)
+        let pieceEnd = min(session.end, slotEnd > cursor ? slotEnd : session.end)
+        hourly[slot] += pieceEnd.timeIntervalSince(cursor)
+        cursor = pieceEnd
+      }
+    }
+  }
+
+  let totalMinutes = Int(appSeconds.values.reduce(0, +) / 60)
+  let contributing = Set(sessions.map(\.deviceId))
+  var body: [String: Any] = [
+    "range": ["from": from.dayKey, "to": to.dayKey],
+    "total_minutes": totalMinutes,
+    "pickups": pickups,
+    "apps": appSeconds.sorted { $0.value > $1.value }.prefix(25).map {
+      [
+        "bundle_id": $0.key,
+        "minutes": Int($0.value / 60),
+        "sessions": appSessions[$0.key] ?? 0,
+      ] as [String: Any]
+    },
+    "devices": devices.map { device -> [String: Any] in
+      var entry: [String: Any] = [
+        "kind": device.kind,
+        "has_data_in_range": contributing.contains(device.deviceId),
+      ]
+      if let model = device.model { entry["model"] = model }
+      if let last = device.lastEventAt { entry["last_synced_at"] = isoFormatter.string(from: last) }
+      return entry
+    },
+    "note":
+      "iCloud syncs this in batches. Time after last_synced_at may simply not have arrived yet; don't read it as the phone being unused.",
+  ]
+  if isSingleDay {
+    body["hourly_minutes"] = hourly.enumerated().map {
+      ["hour": (4 + $0.offset) % 24, "minutes": Int($0.element / 60)]
+    }
+  }
+  return toolResult(body)
 }
 
 private func runStatusTool() throws -> [String: Any] {
