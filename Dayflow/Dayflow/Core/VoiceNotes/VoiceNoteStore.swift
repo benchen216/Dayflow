@@ -4,7 +4,8 @@
 //
 //  Keeps voice notes on disk and generates their meeting notes.
 //
-//  Files live in ~/Library/Application Support/Dayflow/voice_notes/:
+//  Files live in the voice_notes folder under the storage location (by default
+//  ~/Library/Application Support/DayflowPlus/voice_notes/):
 //    <id>/note.json   transcript, mood samples, and meeting notes
 //    <id>/audio.m4a   the recording
 //
@@ -36,14 +37,52 @@ final class VoiceNoteStore: ObservableObject {
   ) {
     self.rootDirectory = rootDirectory
     self.generateText = generateText
+    if rootDirectory.standardizedFileURL == Self.defaultRootDirectory().standardizedFileURL {
+      Self.moveNotes(from: Self.legacyRootDirectories(), into: rootDirectory)
+    }
     reload()
   }
 
   // MARK: - Files
 
   nonisolated static func defaultRootDirectory() -> URL {
-    URL(fileURLWithPath: NSHomeDirectory())
-      .appendingPathComponent("Library/Application Support/Dayflow/voice_notes", isDirectory: true)
+    StorageLocation.directory("voice_notes")
+  }
+
+  /// Earlier places notes were saved: the pre-rename Dayflow folder, and the default
+  /// folder from before the user picked another storage location.
+  private nonisolated static func legacyRootDirectories() -> [URL] {
+    [
+      URL(fileURLWithPath: NSHomeDirectory())
+        .appendingPathComponent("Library/Application Support/Dayflow/voice_notes", isDirectory: true),
+      StorageLocation.defaultBase.appendingPathComponent("voice_notes", isDirectory: true),
+    ]
+  }
+
+  /// Moves each note folder that isn't already in `destination`, then drops empty sources.
+  nonisolated static func moveNotes(from sources: [URL], into destination: URL) {
+    let fileManager = FileManager.default
+    for source in sources where source.standardizedFileURL != destination.standardizedFileURL {
+      guard
+        let items = try? fileManager.contentsOfDirectory(
+          at: source, includingPropertiesForKeys: nil, options: [.skipsHiddenFiles])
+      else { continue }
+      try? fileManager.createDirectory(at: destination, withIntermediateDirectories: true)
+      for item in items {
+        let target = destination.appendingPathComponent(item.lastPathComponent)
+        guard !fileManager.fileExists(atPath: target.path) else { continue }
+        do {
+          try fileManager.moveItem(at: item, to: target)
+        } catch {
+          print("[VoiceNotes] Couldn't move \(item.lastPathComponent): \(error)")
+        }
+      }
+      // Anything that couldn't move stays put, so only an empty folder is removed.
+      try? fileManager.removeItem(at: source.appendingPathComponent(".DS_Store"))
+      if (try? fileManager.contentsOfDirectory(atPath: source.path))?.isEmpty == true {
+        try? fileManager.removeItem(at: source)
+      }
+    }
   }
 
   func directory(for id: UUID) -> URL {

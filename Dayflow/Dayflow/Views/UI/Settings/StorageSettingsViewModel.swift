@@ -20,6 +20,9 @@ final class StorageSettingsViewModel: ObservableObject {
   @Published var captureInterval: TimeInterval = ScreenshotConfig.interval
   /// Measured from the last hour of finalized segments; nil until enough has been recorded.
   @Published var observedBytesPerHour: Int64?
+  /// The folder picked for media, nil while using the default.
+  @Published var customStoragePath: String? = StorageLocation.customBase?.path
+  @Published var storageLocationError: String?
 
   let usageFormatter: ByteCountFormatter = {
     let formatter = ByteCountFormatter()
@@ -192,6 +195,40 @@ final class StorageSettingsViewModel: ObservableObject {
       ])
 
     refreshStorageMetrics()
+  }
+
+  var isStorageLocationUnavailable: Bool { StorageLocation.isCustomUnavailable }
+  var storageLocationNeedsRestart: Bool { StorageLocation.needsRestart }
+
+  func chooseStorageFolder() {
+    let panel = NSOpenPanel()
+    panel.canChooseFiles = false
+    panel.canChooseDirectories = true
+    panel.canCreateDirectories = true
+    panel.allowsMultipleSelection = false
+    panel.message = String(
+      localized: "storage.location.panelMessage",
+      defaultValue: "Choose where Dayflow saves recordings, timelapses and voice notes")
+    panel.prompt = String(localized: "storage.location.panelPrompt", defaultValue: "Choose")
+    if let current = StorageLocation.customBase { panel.directoryURL = current }
+    guard panel.runModal() == .OK, let url = panel.url else { return }
+
+    do {
+      try StorageLocation.validate(url)
+      StorageLocation.customBase = url
+      customStoragePath = url.path
+      storageLocationError = nil
+      AnalyticsService.shared.capture("storage_location_changed", ["custom": true])
+    } catch {
+      storageLocationError = error.localizedDescription
+    }
+  }
+
+  func resetStorageFolder() {
+    StorageLocation.customBase = nil
+    customStoragePath = nil
+    storageLocationError = nil
+    AnalyticsService.shared.capture("storage_location_changed", ["custom": false])
   }
 
   func openRecordingsFolder() {
