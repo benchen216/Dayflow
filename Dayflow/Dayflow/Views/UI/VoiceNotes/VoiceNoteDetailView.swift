@@ -15,6 +15,7 @@ struct VoiceNoteDetailView: View {
   @State private var titleDraft: String
   @State private var confirmingDelete = false
   @State private var actionError: String?
+  @State private var garminContext: String?
   @AppStorage("voiceNotesSkipSilence") private var skipsSilence = false
 
   let note: VoiceNote
@@ -41,6 +42,7 @@ struct VoiceNoteDetailView: View {
       header
       playerBar
       if !note.emotions.isEmpty { moodSection }
+      if let garminContext, note.emotions.isEmpty { garminLine(garminContext) }
       tabPicker
       ScrollView {
         Group {
@@ -61,6 +63,7 @@ struct VoiceNoteDetailView: View {
     }
     .onChange(of: skipsSilence) { _, newValue in player.skipsSilence = newValue }
     .onDisappear { player.stop() }
+    .task(id: note.id) { garminContext = await Self.garminContext(for: note) }
     // Generated notes can rename the recording.
     .onChange(of: note.title) { _, newTitle in titleDraft = newTitle }
     .confirmationDialog(
@@ -202,9 +205,39 @@ struct VoiceNoteDetailView: View {
         playhead: player.currentTime,
         onSeek: { player.seek(to: $0) })
       EmotionShareLegend(shares: summary.combinedShares)
+      if let garminContext { garminLine(garminContext) }
     }
     .padding(12)
     .background(RoundedRectangle(cornerRadius: 10, style: .continuous).fill(theme.cardFill))
+  }
+
+  private func garminLine(_ text: String) -> some View {
+    Text(verbatim: text)
+      .font(.custom("Figtree", size: 11))
+      .foregroundColor(theme.textSecondary)
+  }
+
+  /// Body Battery closest to when the recording was made (Garmin only reports a few points a
+  /// day, so its time is shown) and the HRV from the night before.
+  private static func garminContext(for note: VoiceNote) async -> String? {
+    guard GarminSyncService.shared.hasKey else { return nil }
+    return await Task.detached(priority: .utility) {
+      let storage = StorageManager.shared
+      let middle = note.createdAt.addingTimeInterval(note.duration / 2)
+      var parts: [String] = []
+      if let sample = storage.fetchGarminSample(
+        .bodyBattery, nearest: middle, within: 6 * 60 * 60)
+      {
+        let time = sample.timestamp.formatted(date: .omitted, time: .shortened)
+        parts.append("Body Battery \(sample.value) at \(time)")
+      }
+      let dayString = note.createdAt.getDayInfoFor4AMBoundary().dayString
+      if let day = storage.fetchGarminDay(dayString), let hrv = day.hrvLastNight {
+        let status = day.hrvStatus.map { " (\(DayGarminSection.statusText($0)))" } ?? ""
+        parts.append("HRV last night \(hrv) ms\(status)")
+      }
+      return parts.isEmpty ? nil : "Garmin · " + parts.joined(separator: " · ")
+    }.value
   }
 
   private var tabPicker: some View {

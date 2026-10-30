@@ -68,6 +68,9 @@ struct DaySummaryView: View {
   @State private var dataLoadToken: DaySummaryLoadToken?
   @State private var phoneUsageSummary = DeviceUsageDaySummary.empty
   @State private var phoneUsageLoadTask: Task<Void, Never>?
+  @State private var garminData = DayGarminData.empty
+  @State private var garminLoadTask: Task<Void, Never>?
+  @ObservedObject private var garminService = GarminSyncService.shared
   @ObservedObject private var deviceUsageService = DeviceUsageSyncService.shared
   @State private var reviewLoadToken: DaySummaryLoadToken?
   @State private var categoryStatsToken: DaySummaryLoadToken?
@@ -173,6 +176,12 @@ struct DaySummaryView: View {
 
             phoneUsageSection
           }
+
+          if garminService.hasKey {
+            sectionDivider
+
+            garminSection
+          }
         }
         .frame(width: Design.contentWidth, alignment: .leading)
         .padding(.top, Design.topPadding)
@@ -193,18 +202,25 @@ struct DaySummaryView: View {
     .onAppear {
       loadData()
       loadPhoneUsage()
+      loadGarmin()
     }
     .onDisappear {
       cancelLoadTasks()
       phoneUsageLoadTask?.cancel()
       phoneUsageLoadTask = nil
+      garminLoadTask?.cancel()
+      garminLoadTask = nil
     }
     .onChange(of: selectedDate) {
       loadData()
       loadPhoneUsage()
+      loadGarmin()
     }
     .onReceive(NotificationCenter.default.publisher(for: .deviceUsageDataUpdated)) { _ in
       loadPhoneUsage()
+    }
+    .onReceive(NotificationCenter.default.publisher(for: .garminDataUpdated)) { _ in
+      loadGarmin()
     }
     .onChange(of: goalPromptDay) {
       handleGoalPromptIfReady()
@@ -592,6 +608,46 @@ struct DaySummaryView: View {
       onDoneEditing: {
         isEditingDistractionCategories = false
       }
+    )
+  }
+
+  /// Garmin labels each day by the local calendar date, which is Dayflow's day string. HRV
+  /// readings are from the night before, so they are looked up around the start of the day.
+  private func loadGarmin() {
+    garminLoadTask?.cancel()
+    guard garminService.hasKey else {
+      garminData = .empty
+      return
+    }
+
+    let dayInfo = timelineDayInfo
+    garminLoadTask = Task.detached(priority: .utility) {
+      let storage = StorageManager.shared
+      let nightWindow: TimeInterval = 10 * 60 * 60
+      let data = DayGarminData(
+        day: storage.fetchGarminDay(dayInfo.dayString),
+        bodyBattery: storage.fetchGarminSamples(
+          .bodyBattery, from: dayInfo.startOfDay, to: dayInfo.endOfDay),
+        hrvReadings: storage.fetchGarminSamples(
+          .hrv, from: dayInfo.startOfDay.addingTimeInterval(-nightWindow),
+          to: dayInfo.startOfDay.addingTimeInterval(nightWindow)),
+        rangeStart: dayInfo.startOfDay,
+        rangeEnd: dayInfo.endOfDay
+      )
+      guard !Task.isCancelled else { return }
+      await MainActor.run {
+        guard dayInfo.dayString == self.timelineDayInfo.dayString else { return }
+        self.garminData = data
+        self.garminLoadTask = nil
+      }
+    }
+  }
+
+  private var garminSection: some View {
+    DayGarminSection(
+      data: garminData,
+      lastSyncedAt: garminService.lastSyncedAt,
+      outcome: garminService.lastOutcome
     )
   }
 

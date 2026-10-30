@@ -93,6 +93,7 @@ class AppDelegate: NSObject, NSApplicationDelegate {
     // any MCP client config whose recorded path went stale (app was moved).
     AgentBridgeServer.shared.startIfEnabled()
     DeviceUsageSyncService.shared.startIfEnabled()
+    GarminSyncService.shared.startIfEnabled()
     AgentClientRegistration.repairStaleRegistrations()
 
     // Start heartbeat for DAU tracking

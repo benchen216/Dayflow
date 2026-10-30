@@ -10,7 +10,9 @@ import Foundation
 enum GarminCredentials {
   private static let provider = "garmin-connect"
 
-  static var hasKey: Bool { KeychainManager.shared.retrieve(for: provider) != nil }
+  static var hasKey: Bool { key != nil }
+
+  static var key: String? { KeychainManager.shared.retrieve(for: provider) }
 
   /// Strips whitespace and surrounding quotes, which come along when a value is copied out of an
   /// .env file. Returns nil when nothing usable is left.

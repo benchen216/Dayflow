@@ -699,6 +699,35 @@ final class StorageManager: StorageManaging, @unchecked Sendable {
               ON device_app_sessions(start_ts);
           """)
 
+      // Stress, Body Battery and HRV from the Garmin Connect Personal API
+      try db.execute(
+        sql: """
+              CREATE TABLE IF NOT EXISTS garmin_days (
+                  calendar_date TEXT NOT NULL PRIMARY KEY,
+                  stress_level INTEGER,
+                  rest_stress_seconds INTEGER,
+                  low_stress_seconds INTEGER,
+                  medium_stress_seconds INTEGER,
+                  high_stress_seconds INTEGER,
+                  body_battery_charged INTEGER,
+                  body_battery_drained INTEGER,
+                  hrv_last_night INTEGER,
+                  hrv_weekly_avg INTEGER,
+                  hrv_last_night_high INTEGER,
+                  hrv_status TEXT,
+                  hrv_baseline_low INTEGER,
+                  hrv_baseline_high INTEGER,
+                  fetched_at INTEGER NOT NULL
+              );
+
+              CREATE TABLE IF NOT EXISTS garmin_samples (
+                  kind TEXT NOT NULL,
+                  ts INTEGER NOT NULL,
+                  value INTEGER NOT NULL,
+                  PRIMARY KEY(kind, ts)
+              );
+          """)
+
       // Migration: Add soft delete column to timeline_cards if it doesn't exist
       let timelineCardsColumns = try db.columns(in: "timeline_cards").map { $0.name }
       if !timelineCardsColumns.contains("is_deleted") {

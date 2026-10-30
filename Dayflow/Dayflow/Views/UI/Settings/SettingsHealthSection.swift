@@ -2,21 +2,24 @@
 //  SettingsHealthSection.swift
 //  Dayflow
 //
-//  Where the Garmin Connect developer key is entered. It is kept in the Keychain.
+//  Where the Garmin Connect developer key is entered (kept in the Keychain), and how the
+//  stress, Body Battery and HRV sync is doing.
 //
 
 import SwiftUI
 
 struct SettingsHealthSection: View {
+  @ObservedObject private var sync = GarminSyncService.shared
   @State private var keyInput = ""
-  @State private var hasKey = GarminCredentials.hasKey
   @State private var failedToSave = false
+
+  private var hasKey: Bool { sync.hasKey }
 
   var body: some View {
     SettingsSection(
-      title: "Garmin HRV",
+      title: "Garmin",
       subtitle:
-        "Heart rate variability from your Garmin watch, shown next to your mood. The key is stored in this Mac's Keychain and is never written to a file."
+        "Stress, Body Battery and HRV from your Garmin watch, shown next to your mood. The key is stored in this Mac's Keychain and is never written to a file."
     ) {
       VStack(alignment: .leading, spacing: 0) {
         SettingsRow(
@@ -25,8 +28,15 @@ struct SettingsHealthSection: View {
           showsDivider: true
         ) {
           if hasKey {
-            SettingsSecondaryButton(title: "Remove") {
-              if GarminCredentials.remove() { hasKey = false }
+            HStack(spacing: 8) {
+              SettingsSecondaryButton(
+                title: sync.isSyncing ? "Syncing…" : "Sync now", isDisabled: sync.isSyncing
+              ) {
+                sync.syncNow()
+              }
+              SettingsSecondaryButton(title: "Remove") {
+                if GarminCredentials.remove() { sync.keyChanged() }
+              }
             }
           }
         }
@@ -52,17 +62,25 @@ struct SettingsHealthSection: View {
 
   private var statusText: String {
     if failedToSave { return "The Keychain refused to save the key. Try again." }
-    return hasKey
-      ? "Saved. Syncing HRV isn't turned on yet."
-      : "Without a key, no Garmin data is read."
+    guard hasKey else { return "Without a key, no Garmin data is read." }
+    switch sync.lastOutcome {
+    case .keyRejected:
+      return "Garmin turned down the key. It may have expired or been deleted; paste a new one."
+    case .failed(let reason):
+      return "The last sync failed: \(reason)"
+    case .synced, nil:
+      guard let last = sync.lastSyncedAt else { return "Saved. The first sync starts shortly." }
+      let relative = RelativeDateTimeFormatter().localizedString(for: last, relativeTo: Date())
+      return "Last synced \(relative). Syncs every 6 hours while Dayflow is open."
+    }
   }
 
   private func save() {
     guard GarminCredentials.cleaned(keyInput) != nil else { return }
     if GarminCredentials.save(keyInput) {
       keyInput = ""
-      hasKey = true
       failedToSave = false
+      sync.keyChanged()
     } else {
       failedToSave = true
     }
