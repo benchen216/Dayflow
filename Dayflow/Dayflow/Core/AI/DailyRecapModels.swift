@@ -237,6 +237,8 @@ struct DailyStandupDraft: Codable, Equatable, Sendable {
   var blockersTitle: String
   var blockersBody: String
   var generation: DailyStandupGenerationMetadata?
+  /// One sentence on how the source day felt, from voice note moods. Older drafts have none.
+  var mood: String? = nil
 
   static let `default` = DailyStandupDraft(
     highlightsTitle: "Yesterday's highlights",

@@ -219,6 +219,7 @@ final class DailyRecapScheduler: @unchecked Sendable {
         uniquingKeysWith: { _, new in new }
       ))
 
+    let moodLog = await DailyMoodLog.load(from: sourceStart, to: sourceEnd)
     let startedAt = Date()
     do {
       let context = DailyRecapGenerationContext(
@@ -229,7 +230,8 @@ final class DailyRecapScheduler: @unchecked Sendable {
         priorEntries: priorEntries,
         highlightsTitle: "Yesterday's highlights",
         tasksTitle: "Today's tasks",
-        blockersTitle: "Blockers"
+        blockersTitle: "Blockers",
+        moodLog: moodLog
       )
       let draft = try await DailyRecapGenerator.shared.generate(context: context)
       guard let payloadJSON = draft.encodedJSONString() else {

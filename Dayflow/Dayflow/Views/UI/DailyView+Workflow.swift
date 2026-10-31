@@ -39,6 +39,7 @@ extension DailyView {
           // Gap between the workflow grid and the standup section: the
           // "Section gap" tweak is the total (VStack spacing + this padding).
           .padding(.top, max(0, CGFloat(StandupStyle.sectionGap) - sectionSpacing))
+          DailyMoodSection(day: workflowDayInfo(for: selectedDate), scale: scale)
         }
         .frame(width: contentWidth, alignment: .leading)
         .padding(.horizontal, horizontalInset)
@@ -211,7 +212,8 @@ extension DailyView {
                 durationMinutes: cardInfo.durationMinutes,
                 title: cardInfo.title,
                 accentColor: theme.accentText,
-                layoutScale: layoutScale
+                layoutScale: layoutScale,
+                heartRate: cardInfo.heartRate
               )
             }
             .position(x: frame.midX, y: frame.minY - (4 * layoutScale))
@@ -311,7 +313,13 @@ extension DailyView {
 
     workflowLoadTask = Task.detached(priority: .userInitiated) {
       let cards = StorageManager.shared.fetchTimelineCards(forDay: workflowDay.dayString)
-      let computed = computeDailyWorkflow(cards: cards, categories: categorySnapshot)
+      let heartRateSamples = StorageManager.shared.fetchGarminSamples(
+        .heartRate, from: workflowDay.startOfDay, to: workflowDay.endOfDay)
+      let computed = computeDailyWorkflow(
+        cards: cards, categories: categorySnapshot,
+        heartRate: workflowHeartRate(
+          samples: heartRateSamples,
+          dayMidnight: Calendar.current.startOfDay(for: workflowDay.startOfDay)))
 
       guard !Task.isCancelled else { return }
 

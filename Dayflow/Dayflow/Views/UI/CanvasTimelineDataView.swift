@@ -45,6 +45,8 @@ private struct CanvasPositionedActivity: Identifiable {
   let faviconSecondaryHost: String?
   let failureCount: Int
   let batchIds: [Int64]
+  /// Average Garmin heart rate over the card, nil without samples.
+  let heartRate: Int?
 }
 
 // A stretch of iPhone/iPad use, drawn as a thin bar between the hour labels
@@ -391,7 +393,8 @@ struct CanvasTimelineDataView: View {
             compactVerticalPadding: cardCompactVerticalPadding,
             normalVerticalPadding: cardNormalVerticalPadding,
             hoverScale: cardHoverScale,
-            pressedScale: cardPressedScale
+            pressedScale: cardPressedScale,
+            heartRate: item.heartRate
           )
           .frame(width: geo.size.width, height: item.height)
           .position(x: geo.size.width / 2, y: item.yPosition + (item.height / 2))
@@ -747,6 +750,13 @@ struct CanvasTimelineDataView: View {
         pixelsPerMinute: self.pixelsPerMinute
       )
 
+      // One read for the whole day; each card averages its own stretch.
+      let heartRateSamples: [GarminSample] = {
+        guard let first = segments.map(\.start).min(), let last = segments.map(\.end).max()
+        else { return [] }
+        return StorageManager.shared.fetchGarminSamples(.heartRate, from: first, to: last)
+      }()
+
       let positioned = segments.map { seg -> CanvasPositionedActivity in
         let y = self.calculateYPosition(for: seg.start)
         // Card spacing: -2 total (1px top + 1px bottom)
@@ -773,7 +783,8 @@ struct CanvasTimelineDataView: View {
           faviconPrimaryHost: primaryHost,
           faviconSecondaryHost: secondaryHost,
           failureCount: seg.failureCount,
-          batchIds: seg.batchIds
+          batchIds: seg.batchIds,
+          heartRate: GarminSample.average(of: heartRateSamples, from: seg.start, to: seg.end)
         )
       }
 

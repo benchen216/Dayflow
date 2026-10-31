@@ -227,7 +227,28 @@ extension DailyView {
           .frame(width: cardWidth)
         }
       }
+
+      if let mood = standupMoodText {
+        standupMoodLine(mood, scale: scale)
+      }
     }
+  }
+  /// The AI's sentence about how the source day felt, if it wrote one.
+  var standupMoodText: String? {
+    standupDraft.mood.flatMap(sanitizedBulletText)
+  }
+  func standupMoodLine(_ mood: String, scale: CGFloat) -> some View {
+    HStack(alignment: .firstTextBaseline, spacing: 8 * scale) {
+      Text(String(localized: "daily.standup.mood", defaultValue: "Mood"))
+        .font(.custom("Figtree-Medium", size: 14 * scale))
+        .foregroundColor(theme.textSecondary)
+      Text(verbatim: mood)
+        .font(.custom("Figtree-Regular", size: 14 * scale))
+        .foregroundColor(theme.textPrimary)
+        .textSelection(.enabled)
+    }
+    .padding(.horizontal, 26 * scale)
+    .padding(.top, 6 * scale)
   }
   func copyStandupUpdateToClipboard() {
     let clipboardText = standupClipboardText(for: selectedDate)
@@ -397,6 +418,9 @@ extension DailyView {
           + "cards=\(cards.count) observations=\(observations.count) prior_daily=\(priorEntries.count) input_mode=\(usesDayflowInputs ? "cards_observations_prior" : "cards_only")"
       )
 
+      let moodLog = await DailyMoodLog.load(
+        from: sourceDayInfo.startOfDay, to: sourceDayInfo.endOfDay)
+
       do {
         let context = DailyRecapGenerationContext(
           targetDayString: storageDayString,
@@ -406,7 +430,8 @@ extension DailyView {
           priorEntries: priorEntries,
           highlightsTitle: currentHighlightsTitle,
           tasksTitle: currentTasksTitle,
-          blockersTitle: currentBlockersTitle
+          blockersTitle: currentBlockersTitle,
+          moodLog: moodLog
         )
         let regeneratedDraft = try await DailyRecapGenerator.shared.generate(context: context)
 
@@ -552,6 +577,12 @@ extension DailyView {
       lines.append(String(localized: "- None right now"))
     } else {
       blockersItems.forEach { lines.append("- \($0)") }
+    }
+
+    if let mood = standupMoodText {
+      lines.append("")
+      lines.append(String(localized: "daily.standup.mood", defaultValue: "Mood"))
+      lines.append("- \(mood)")
     }
 
     return lines.joined(separator: "\n")

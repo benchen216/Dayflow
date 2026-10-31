@@ -5,9 +5,11 @@ import UserNotifications
 
 // MARK: - Daily Workflow Computation
 
-func computeDailyWorkflow(cards: [TimelineCard], categories: [TimelineCategory])
-  -> DailyWorkflowComputationResult
-{
+/// `heartRate` maps a card's start and end minute to its average heart rate.
+func computeDailyWorkflow(
+  cards: [TimelineCard], categories: [TimelineCategory],
+  heartRate: (_ startMinute: Double, _ endMinute: Double) -> Int? = { _, _ in nil }
+) -> DailyWorkflowComputationResult {
   let systemCategoryKey = normalizedCategoryKey("System")
   let orderedCategories =
     categories
@@ -215,7 +217,8 @@ func computeDailyWorkflow(cards: [TimelineCard], categories: [TimelineCategory])
         cardInfos.append(
           DailyWorkflowSlotCardInfo(
             title: best.cardTitle,
-            durationMinutes: best.cardDurationMinutes
+            durationMinutes: best.cardDurationMinutes,
+            heartRate: heartRate(best.startMinute, best.endMinute)
           ))
       } else {
         cardInfos.append(nil)
@@ -454,6 +457,19 @@ func distanceToRange(_ value: Double, start: Double, end: Double) -> Double {
   if value < start { return start - value }
   if value > end { return value - end }
   return 0
+}
+
+/// Heart rate lookup for `computeDailyWorkflow`. Card minutes count from the day's midnight
+/// and run past 1440 after midnight.
+func workflowHeartRate(samples: [GarminSample], dayMidnight: Date)
+  -> (_ startMinute: Double, _ endMinute: Double) -> Int?
+{
+  { startMinute, endMinute in
+    GarminSample.average(
+      of: samples,
+      from: dayMidnight.addingTimeInterval(startMinute * 60),
+      to: dayMidnight.addingTimeInterval(endMinute * 60))
+  }
 }
 
 func parseCardMinute(_ value: String) -> Double? {

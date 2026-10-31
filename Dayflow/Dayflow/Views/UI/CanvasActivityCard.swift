@@ -40,6 +40,8 @@ struct CanvasActivityCard: View {
   let normalVerticalPadding: CGFloat
   let hoverScale: CGFloat
   let pressedScale: CGFloat
+  /// Average Garmin heart rate over the card, nil hides the badge.
+  var heartRate: Int? = nil
 
   private var isFailedCard: Bool {
     title == "Processing failed"
@@ -153,6 +155,22 @@ struct CanvasActivityCard: View {
             HStack(spacing: 6) {
               if isBackupGenerated {
                 backupIndicator
+              }
+
+              if let heartRate {
+                Text(verbatim: "♥ \(heartRate)")
+                  .font(
+                    Font.custom("Figtree", size: secondaryFontSize)
+                      .weight(.medium)
+                      .monospacedDigit()
+                  )
+                  .foregroundColor(style.time)
+                  .lineLimit(1)
+                  .fixedSize()
+                  .help(
+                    String(
+                      localized: "timeline.card.heartRateHelp",
+                      defaultValue: "Average Garmin heart rate during this activity"))
               }
 
               Text(time)

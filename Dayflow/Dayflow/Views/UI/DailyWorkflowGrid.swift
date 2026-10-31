@@ -379,13 +379,15 @@ func workflowTooltip(
   durationMinutes: Double,
   title: String,
   accentColor: Color,
-  layoutScale: CGFloat
+  layoutScale: CGFloat,
+  heartRate: Int? = nil
 ) -> some View {
   DailyWorkflowTooltip(
     durationMinutes: durationMinutes,
     title: title,
     accentColor: accentColor,
-    layoutScale: layoutScale
+    layoutScale: layoutScale,
+    heartRate: heartRate
   )
 }
 
@@ -396,12 +398,20 @@ struct DailyWorkflowTooltip: View {
   let title: String
   let accentColor: Color
   let layoutScale: CGFloat
+  var heartRate: Int? = nil
 
   var body: some View {
     VStack(alignment: .leading, spacing: 4 * layoutScale) {
-      Text(formatDurationValue(durationMinutes))
-        .font(.custom("Figtree-SemiBold", size: 12 * layoutScale))
-        .foregroundStyle(accentColor)
+      HStack(spacing: 8 * layoutScale) {
+        Text(formatDurationValue(durationMinutes))
+          .font(.custom("Figtree-SemiBold", size: 12 * layoutScale))
+          .foregroundStyle(accentColor)
+        if let heartRate {
+          Text(verbatim: "♥ \(heartRate) bpm")
+            .font(.custom("Figtree-Regular", size: 12 * layoutScale).monospacedDigit())
+            .foregroundStyle(theme.textSecondary)
+        }
+      }
       Text(title)
         .font(.custom("Figtree-Regular", size: 12 * layoutScale))
         .foregroundStyle(theme.textPrimary)

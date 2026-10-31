@@ -58,6 +58,19 @@ struct GarminSample: Equatable, Sendable {
   let value: Int
 }
 
+extension GarminSample {
+  /// Average value rounded down, nil without samples.
+  static func average(_ samples: [GarminSample]) -> Int? {
+    guard !samples.isEmpty else { return nil }
+    return samples.map(\.value).reduce(0, +) / samples.count
+  }
+
+  /// Average of the samples taken in [start, end), nil when none fall inside.
+  static func average(of samples: [GarminSample], from start: Date, to end: Date) -> Int? {
+    average(samples.filter { $0.timestamp >= start && $0.timestamp < end })
+  }
+}
+
 enum GarminDecoding {
   /// `/usersummary-service/stats/stress/daily/{start}/{end}`
   static func stressDays(from data: Data) throws -> [GarminDay] {

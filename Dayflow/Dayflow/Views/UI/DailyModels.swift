@@ -68,6 +68,8 @@ enum DailyAccessFlowStep {
 struct DailyWorkflowSlotCardInfo: Sendable {
   let title: String
   let durationMinutes: Double
+  /// Average Garmin heart rate over the card, nil without samples.
+  var heartRate: Int? = nil
 }
 struct DailyWorkflowGridRow: Identifiable, Sendable {
   let id: String

@@ -9,6 +9,10 @@ struct DailyRecapGenerationContext: Sendable {
   let highlightsTitle: String
   let tasksTitle: String
   let blockersTitle: String
+  /// The source day's voice note moods; nil or empty leaves the prompt as it was.
+  var moodLog: DailyMoodLog? = nil
+
+  var moodText: String { moodLog?.promptText(day: sourceDayString) ?? "" }
 }
 
 struct DailyRecapProviderAvailability: Equatable, Sendable {
@@ -390,7 +394,9 @@ final class DailyRecapGenerator {
       tasks: Self.normalizedBulletItems(from: response.unfinished),
       blockersTitle: context.blockersTitle,
       blockersBody: Self.normalizedBlockersText(from: response.blockers),
-      generation: metadata
+      generation: metadata,
+      // The Dayflow backend has no mood field, so the mood line is written here.
+      mood: context.moodLog?.summarySentence()
     )
     guard draft.hasGeneratedContent else {
       throw DailyRecapGeneratorError.emptyGeneratedContent(day: context.sourceDayString)
@@ -414,7 +420,8 @@ final class DailyRecapGenerator {
       apiKey: apiKey,
       preference: .default
     )
-    let prompt = Self.makeLocalPrompt(day: context.sourceDayString, cards: context.cards)
+    let prompt = Self.makeLocalPrompt(
+      day: context.sourceDayString, cards: context.cards, moodText: context.moodText)
     let (rawText, _) = try await provider.generateText(
       prompt: prompt,
       maxOutputTokens: Self.localRecapMaxOutputTokens
@@ -431,7 +438,8 @@ final class DailyRecapGenerator {
       throw DailyRecapGeneratorError.missingLocalConfiguration
     }
 
-    let prompt = Self.makeLocalPrompt(day: context.sourceDayString, cards: context.cards)
+    let prompt = Self.makeLocalPrompt(
+      day: context.sourceDayString, cards: context.cards, moodText: context.moodText)
     let (rawText, _) = try await provider.generateText(
       prompt: prompt,
       maxTokens: Self.localRecapMaxOutputTokens
@@ -450,7 +458,8 @@ final class DailyRecapGenerator {
 
     let provider = CodexProvider()
     let prompt = Self.makeLocalPrompt(
-      day: context.sourceDayString, cards: context.cards, provider: .chatgpt)
+      day: context.sourceDayString, cards: context.cards, provider: .chatgpt,
+      moodText: context.moodText)
     func generate(model: String) async throws -> DailyStandupDraft {
       try Task.checkCancellation()
       let (rawText, _) = try await provider.generateText(
@@ -495,7 +504,8 @@ final class DailyRecapGenerator {
 
     let provider = ClaudeProvider()
     let prompt = Self.makeLocalPrompt(
-      day: context.sourceDayString, cards: context.cards, provider: .claude)
+      day: context.sourceDayString, cards: context.cards, provider: .claude,
+      moodText: context.moodText)
     let (rawText, _) = try await provider.generateText(
       prompt: prompt,
       model: "opus",
@@ -570,7 +580,8 @@ final class DailyRecapGenerator {
       tasks: tasks,
       blockersTitle: context.blockersTitle,
       blockersBody: "",
-      generation: metadata
+      generation: metadata,
+      mood: context.moodText.isEmpty ? nil : parsed.mood
     )
     guard draft.hasGeneratedContent else {
       throw DailyRecapGeneratorError.emptyGeneratedContent(day: context.sourceDayString)
@@ -579,7 +590,7 @@ final class DailyRecapGenerator {
   }
 
   static func makeLocalPrompt(
-    day: String, cards: [TimelineCard], provider: DailyRecapProvider? = nil
+    day: String, cards: [TimelineCard], provider: DailyRecapProvider? = nil, moodText: String = ""
   ) -> String {
     let cardsText = makeCardsText(day: day, cards: cards)
     let languageSection = makeLocalPromptLanguageSection()
@@ -601,7 +612,7 @@ final class DailyRecapGenerator {
       Activity log:
 
       \(cardsText)
-
+      \(makeLocalPromptMoodSection(moodText))
       \(languageSection)
 
       ## Output format
@@ -610,10 +621,24 @@ final class DailyRecapGenerator {
 
       {
         "done": ["first bullet", "second bullet", "..."],
-        "next": "one sentence or null"
+        "next": "one sentence or null"\(moodText.isEmpty ? "" : ",\n  \"mood\": \"one sentence or null\"")
       }
 
       Return exactly one JSON object and nothing before or after it.
+      """
+  }
+
+  /// Without voice notes this is empty, so the benchmarked prompt is unchanged.
+  private static func makeLocalPromptMoodSection(_ moodText: String) -> String {
+    guard !moodText.isEmpty else { return "" }
+    return """
+
+      ## Mood
+
+      \(moodText)
+
+      Write "mood" as one short sentence on how the day felt, using only this mood log. Keep it gentle and tentative; it is an estimate. Never mention mood in "done" or "next". If the log gives no clear picture, set "mood" to null.
+
       """
   }
 
@@ -649,6 +674,7 @@ final class DailyRecapGenerator {
 
     let done = Array(normalizedStrings(from: json["done"]).prefix(5))
     let next = normalizedOptionalString(from: json["next"])
+    let mood = normalizedOptionalString(from: json["mood"])
 
     let hasExpectedShape = json.keys.contains("done") || json.keys.contains("next")
     guard hasExpectedShape else {
@@ -657,7 +683,8 @@ final class DailyRecapGenerator {
 
     return ParsedDailyRecapResponse(
       done: done,
-      next: next
+      next: next,
+      mood: mood
     )
   }
 
@@ -826,4 +853,5 @@ final class DailyRecapGenerator {
 private struct ParsedDailyRecapResponse {
   let done: [String]
   let next: String?
+  let mood: String?
 }

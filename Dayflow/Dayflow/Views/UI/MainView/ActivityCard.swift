@@ -408,6 +408,10 @@ struct ActivityCard: View {
             .textSelection(.enabled)
         }
       }
+
+      if !isFailedCard(activity) {
+        ActivityHeartRateChart(start: activity.startTime, end: activity.endTime)
+      }
     }
   }
 
