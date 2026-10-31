@@ -19,7 +19,7 @@ struct SettingsHealthSection: View {
     SettingsSection(
       title: "Garmin",
       subtitle:
-        "Stress, Body Battery and HRV from your Garmin watch, shown next to your mood. The key is stored in this Mac's Keychain and is never written to a file."
+        "Stress, Body Battery, HRV and heart rate from your Garmin watch, shown next to your mood. The key is stored in this Mac's Keychain and is never written to a file."
     ) {
       VStack(alignment: .leading, spacing: 0) {
         SettingsRow(

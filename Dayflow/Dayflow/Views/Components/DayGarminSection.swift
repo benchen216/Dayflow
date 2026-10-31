@@ -2,7 +2,7 @@
 //  DayGarminSection.swift
 //  Dayflow
 //
-//  Garmin stress, Body Battery and HRV for the Day Summary right rail.
+//  Garmin stress, Body Battery, HRV and heart rate for the Day Summary right rail.
 //
 
 import SwiftUI
@@ -11,6 +11,7 @@ struct DayGarminData: Equatable {
   var day: GarminDay?
   var bodyBattery: [GarminSample] = []
   var hrvReadings: [GarminSample] = []
+  var heartRate: [GarminSample] = []
   var rangeStart = Date()
   var rangeEnd = Date()
 
@@ -31,6 +32,9 @@ struct DayGarminSection: View {
     static let sparkHeight: CGFloat = 34
     static let batteryColor = Color(hex: "3FA796")
     static let hrvColor = Color(hex: "8A6FDF")
+    static let heartRateColor = Color(hex: "E0607E")
+    /// Garmin sends a point every two minutes; a longer gap means the watch was off.
+    static let heartRateGap: TimeInterval = 10 * 60
     static let stressColors = [
       Color(hex: "5B8DEF"), Color(hex: "F2C14E"), Color(hex: "F08A4B"), Color(hex: "D9534F"),
     ]
@@ -48,6 +52,7 @@ struct DayGarminSection: View {
         if day.stressLevel != nil { stress(day) }
         if day.bodyBatteryCharged != nil || !data.bodyBattery.isEmpty { bodyBattery(day) }
         if day.hrvLastNight != nil { hrv(day) }
+        if day.restingHeartRate != nil || !data.heartRate.isEmpty { heartRate(day) }
       } else {
         note("No Garmin data for this day yet.")
       }
@@ -152,6 +157,27 @@ struct DayGarminSection: View {
     }
   }
 
+  // MARK: - Heart rate
+
+  private func heartRate(_ day: GarminDay) -> some View {
+    let values = data.heartRate.map(\.value)
+    let low = values.min() ?? day.minHeartRate ?? 0
+    let high = values.max() ?? day.maxHeartRate ?? 0
+    return VStack(alignment: .leading, spacing: Design.blockSpacing) {
+      headline(
+        value: day.restingHeartRate.map { "\($0) bpm" } ?? "–", label: "resting heart rate",
+        detail: high > 0 ? "\(low)–\(high) today" : nil)
+      if data.heartRate.count > 1 {
+        Sparkline(
+          samples: data.heartRate, start: data.rangeStart, end: data.rangeEnd,
+          range: low...max(high, low + 1), color: Design.heartRateColor,
+          breakAfter: Design.heartRateGap, showsPoints: false
+        )
+        .frame(height: Design.sparkHeight)
+      }
+    }
+  }
+
   nonisolated static func statusText(_ status: String) -> String {
     switch status {
     case "BALANCED": return "balanced"
@@ -187,13 +213,16 @@ struct DayGarminSection: View {
   }
 }
 
-/// A line through timestamped samples, placed by time across [start, end].
+/// A line through timestamped samples, placed by time across [start, end]. With `breakAfter`,
+/// the line lifts wherever two samples are further apart than that.
 private struct Sparkline: View {
   let samples: [GarminSample]
   let start: Date
   let end: Date
   let range: ClosedRange<Int>
   let color: Color
+  var breakAfter: TimeInterval? = nil
+  var showsPoints = true
 
   var body: some View {
     GeometryReader { geo in
@@ -208,11 +237,20 @@ private struct Sparkline: View {
         Path { path in
           guard let first = points.first else { return }
           path.move(to: first)
-          points.dropFirst().forEach { path.addLine(to: $0) }
+          for index in points.indices.dropFirst() {
+            let gap = samples[index].timestamp.timeIntervalSince(samples[index - 1].timestamp)
+            if let breakAfter, gap > breakAfter {
+              path.move(to: points[index])
+            } else {
+              path.addLine(to: points[index])
+            }
+          }
         }
         .stroke(color, style: StrokeStyle(lineWidth: 1.5, lineCap: .round, lineJoin: .round))
-        ForEach(points.indices, id: \.self) { index in
-          Circle().fill(color).frame(width: 4, height: 4).position(points[index])
+        if showsPoints {
+          ForEach(points.indices, id: \.self) { index in
+            Circle().fill(color).frame(width: 4, height: 4).position(points[index])
+          }
         }
       }
     }

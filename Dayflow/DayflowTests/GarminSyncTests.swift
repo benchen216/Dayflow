@@ -29,6 +29,20 @@ final class GarminSyncTests: XCTestCase {
       {"hrvValue":55,"readingTimeGMT":"2026-10-28T17:57:08.0"}]}
     """
 
+  private static let heartRate = """
+    {"calendarDate":"2026-10-29","startTimestampGMT":"2026-10-28T16:00:00.0",
+    "maxHeartRate":114,"minHeartRate":49,"restingHeartRate":49,
+    "lastSevenDaysAvgRestingHeartRate":48,
+    "heartRateValueDescriptors":[{"index":1,"key":"heartrate"},{"index":0,"key":"timestamp"}],
+    "heartRateValues":[[1793203200000,99],[1793203320000,null],[1793203440000,88]]}
+    """
+
+  /// What Garmin answers for a day the watch hasn't synced yet.
+  private static let heartRateEmpty = """
+    {"calendarDate":"2026-10-31","maxHeartRate":null,"minHeartRate":null,
+    "restingHeartRate":null,"heartRateValueDescriptors":null,"heartRateValues":null}
+    """
+
   // MARK: - Decoding
 
   func testStressDays() throws {
@@ -63,6 +77,27 @@ final class GarminSyncTests: XCTestCase {
       readings.first?.timestamp, ISO8601DateFormatter().date(from: "2026-10-28T17:52:08Z"))
   }
 
+  func testHeartRateFollowsDescriptorOrderAndSkipsGaps() throws {
+    let result = try GarminDecoding.heartRate(from: Data(Self.heartRate.utf8))
+    let day = try XCTUnwrap(result.day)
+    XCTAssertEqual(day.calendarDate, "2026-10-29")
+    XCTAssertEqual(day.restingHeartRate, 49)
+    XCTAssertEqual(day.minHeartRate, 49)
+    XCTAssertEqual(day.maxHeartRate, 114)
+    XCTAssertTrue(day.hasData)
+    XCTAssertEqual(result.samples.map(\.value), [99, 88])
+    XCTAssertEqual(result.samples.map(\.kind), [.heartRate, .heartRate])
+    // Midnight in Taiwan on the 29th.
+    XCTAssertEqual(
+      result.samples.first?.timestamp, ISO8601DateFormatter().date(from: "2026-10-28T16:00:00Z"))
+  }
+
+  func testUnsyncedHeartRateDayHasNoData() throws {
+    let result = try GarminDecoding.heartRate(from: Data(Self.heartRateEmpty.utf8))
+    XCTAssertEqual(result.samples, [])
+    XCTAssertEqual(result.day?.hasData, false)
+  }
+
   func testNullAndEmptyBodiesMeanNoData() throws {
     XCTAssertEqual(try GarminDecoding.hrvDays(from: Data("null".utf8)), [])
     XCTAssertEqual(try GarminDecoding.hrvReadings(from: Data()), [])
@@ -75,11 +110,13 @@ final class GarminSyncTests: XCTestCase {
     let merged = GarminDecoding.merge(
       try GarminDecoding.stressDays(from: Data(Self.stress.utf8)),
       try GarminDecoding.bodyBattery(from: Data(Self.bodyBattery.utf8)).days,
-      try GarminDecoding.hrvDays(from: Data(Self.hrvDaily.utf8)))
+      try GarminDecoding.hrvDays(from: Data(Self.hrvDaily.utf8)),
+      [try XCTUnwrap(GarminDecoding.heartRate(from: Data(Self.heartRate.utf8)).day)])
     XCTAssertEqual(merged.count, 1)
     XCTAssertEqual(merged[0].stressLevel, 43)
     XCTAssertEqual(merged[0].bodyBatteryCharged, 30)
     XCTAssertEqual(merged[0].hrvLastNight, 51)
+    XCTAssertEqual(merged[0].restingHeartRate, 49)
   }
 
   func testTokenIsTheBareResponseBody() {
@@ -106,12 +143,29 @@ final class GarminSyncTests: XCTestCase {
       "stress": [(Data(), 401), (Data(Self.stress.utf8), 200)],
       "bodyBattery": [(Data("[]".utf8), 200)],
       "hrv/daily": [(Data("null".utf8), 200)],
+      "dailyHeartRate": [(Data(Self.heartRate.utf8), 200)],
     ])
     let api = GarminAPI(transport: transport, apiKey: { "key" })
     let result = try await api.fetch(days: ["2026-10-29"])
     XCTAssertEqual(result.days.first?.stressLevel, 43)
+    XCTAssertEqual(result.days.first?.restingHeartRate, 49)
+    XCTAssertEqual(result.samples.filter { $0.kind == .heartRate }.count, 2)
     let tokens = await transport.bearerTokens
-    XCTAssertEqual(tokens, ["Bearer t1", "Bearer t2", "Bearer t2", "Bearer t2"])
+    XCTAssertEqual(tokens, ["Bearer t1", "Bearer t2", "Bearer t2", "Bearer t2", "Bearer t2"])
+  }
+
+  func testHeartRateIsRequestedOncePerDay() async throws {
+    let transport = StubTransport(routes: [
+      "token": [(Data("t".utf8), 200)],
+      "stress": [(Data("[]".utf8), 200)],
+      "bodyBattery": [(Data("[]".utf8), 200)],
+      "hrv/daily": [(Data("null".utf8), 200)],
+      "dailyHeartRate": [(Data(Self.heartRateEmpty.utf8), 200)],
+    ])
+    let api = GarminAPI(transport: transport, apiKey: { "key" })
+    _ = try await api.fetch(days: ["2026-10-29", "2026-10-30", "2026-10-31"])
+    let dates = await transport.heartRateDates
+    XCTAssertEqual(dates, ["2026-10-29", "2026-10-30", "2026-10-31"])
   }
 
   func testRejectedKeyIsReported() async {
@@ -144,6 +198,7 @@ private actor StubTransport: GarminTransport {
   private var routes: [String: [(Data, Int)]]
   private(set) var bearerTokens: [String] = []
   private(set) var callCount = 0
+  private(set) var heartRateDates: [String] = []
 
   init(routes: [String: [(Data, Int)]]) { self.routes = routes }
 
@@ -162,7 +217,14 @@ private actor StubTransport: GarminTransport {
       key =
         path.contains("stress") ? "stress"
         : path.contains("bodyBattery") ? "bodyBattery"
-        : path.contains("hrv/daily") ? "hrv/daily" : path
+        : path.contains("hrv/daily") ? "hrv/daily"
+        : path.contains("dailyHeartRate") ? "dailyHeartRate" : path
+      if key == "dailyHeartRate", let url = request.url,
+        let date = URLComponents(url: url, resolvingAgainstBaseURL: false)?.queryItems?
+          .first(where: { $0.name == "date" })?.value
+      {
+        heartRateDates.append(date)
+      }
     }
     guard var answers = routes[key], let first = answers.first else {
       throw URLError(.unsupportedURL)

@@ -2,9 +2,9 @@
 //  GarminSyncService.swift
 //  Dayflow
 //
-//  Pulls the last week of Garmin stress, Body Battery and HRV into Dayflow's database when the
-//  app opens and every six hours after, so the Day summary and voice notes can show them next
-//  to mood. Runs only while a Garmin key is saved.
+//  Pulls the last week of Garmin stress, Body Battery, HRV and heart rate into Dayflow's
+//  database when the app opens and every six hours after, so the Day summary and voice notes
+//  can show them next to mood. Runs only while a Garmin key is saved.
 //
 
 import Foundation

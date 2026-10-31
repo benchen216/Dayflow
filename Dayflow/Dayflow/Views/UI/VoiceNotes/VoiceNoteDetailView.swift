@@ -217,14 +217,22 @@ struct VoiceNoteDetailView: View {
       .foregroundColor(theme.textSecondary)
   }
 
-  /// Body Battery closest to when the recording was made (Garmin only reports a few points a
-  /// day, so its time is shown) and the HRV from the night before.
+  /// Heart rate while recording, Body Battery closest to when the recording was made (Garmin
+  /// only reports a few points a day, so its time is shown) and the HRV from the night before.
   private static func garminContext(for note: VoiceNote) async -> String? {
     guard GarminSyncService.shared.hasKey else { return nil }
     return await Task.detached(priority: .utility) {
       let storage = StorageManager.shared
       let middle = note.createdAt.addingTimeInterval(note.duration / 2)
       var parts: [String] = []
+      // Heart rate comes every two minutes, so widen short recordings to catch a point.
+      let heartRate = storage.fetchGarminSamples(
+        .heartRate, from: note.createdAt.addingTimeInterval(-2 * 60),
+        to: note.createdAt.addingTimeInterval(note.duration + 2 * 60))
+      if !heartRate.isEmpty {
+        let average = heartRate.map(\.value).reduce(0, +) / heartRate.count
+        parts.append("heart rate \(average) bpm")
+      }
       if let sample = storage.fetchGarminSample(
         .bodyBattery, nearest: middle, within: 6 * 60 * 60)
       {

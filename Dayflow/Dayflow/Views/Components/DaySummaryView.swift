@@ -631,6 +631,8 @@ struct DaySummaryView: View {
         hrvReadings: storage.fetchGarminSamples(
           .hrv, from: dayInfo.startOfDay.addingTimeInterval(-nightWindow),
           to: dayInfo.startOfDay.addingTimeInterval(nightWindow)),
+        heartRate: storage.fetchGarminSamples(
+          .heartRate, from: dayInfo.startOfDay, to: dayInfo.endOfDay),
         rangeStart: dayInfo.startOfDay,
         rangeEnd: dayInfo.endOfDay
       )

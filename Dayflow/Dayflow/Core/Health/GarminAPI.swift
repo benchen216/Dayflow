@@ -58,8 +58,8 @@ actor GarminAPI {
   /// Forgets the token, e.g. after the key was replaced.
   func reset() { token = nil }
 
-  /// Daily stress, Body Battery and HRV for the inclusive local day range, plus Body Battery
-  /// points and HRV sleep readings.
+  /// Daily stress, Body Battery, HRV and heart rate for the inclusive local day range, plus
+  /// Body Battery points, HRV sleep readings and the all-day heart rate series.
   func fetch(days: [String]) async throws -> GarminFetchResult {
     guard let first = days.first, let last = days.last else {
       return GarminFetchResult(days: [], samples: [])
@@ -79,8 +79,17 @@ actor GarminAPI {
       let readings = try await get("/hrv-service/hrv/\(day.calendarDate)")
       samples += try GarminDecoding.hrvReadings(from: readings)
     }
+
+    // Heart rate has no range endpoint, so it is one request per day.
+    var heartRateDays: [GarminDay] = []
+    for day in days {
+      let heartRate = try GarminDecoding.heartRate(
+        from: await get("/wellness-service/wellness/dailyHeartRate", query: [("date", day)]))
+      if let summary = heartRate.day { heartRateDays.append(summary) }
+      samples += heartRate.samples
+    }
     return GarminFetchResult(
-      days: GarminDecoding.merge(stress, battery.days, hrv), samples: samples)
+      days: GarminDecoding.merge(stress, battery.days, hrv, heartRateDays), samples: samples)
   }
 
   // MARK: - Requests

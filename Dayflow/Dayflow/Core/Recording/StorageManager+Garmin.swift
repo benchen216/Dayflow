@@ -11,9 +11,10 @@ extension StorageManager {
                   calendar_date, stress_level, rest_stress_seconds, low_stress_seconds,
                   medium_stress_seconds, high_stress_seconds, body_battery_charged,
                   body_battery_drained, hrv_last_night, hrv_weekly_avg, hrv_last_night_high,
-                  hrv_status, hrv_baseline_low, hrv_baseline_high, fetched_at
+                  hrv_status, hrv_baseline_low, hrv_baseline_high, resting_heart_rate,
+                  min_heart_rate, max_heart_rate, fetched_at
               )
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
               ON CONFLICT(calendar_date) DO UPDATE SET
                   stress_level = COALESCE(excluded.stress_level, stress_level),
                   rest_stress_seconds = COALESCE(excluded.rest_stress_seconds, rest_stress_seconds),
@@ -28,6 +29,9 @@ extension StorageManager {
                   hrv_status = COALESCE(excluded.hrv_status, hrv_status),
                   hrv_baseline_low = COALESCE(excluded.hrv_baseline_low, hrv_baseline_low),
                   hrv_baseline_high = COALESCE(excluded.hrv_baseline_high, hrv_baseline_high),
+                  resting_heart_rate = COALESCE(excluded.resting_heart_rate, resting_heart_rate),
+                  min_heart_rate = COALESCE(excluded.min_heart_rate, min_heart_rate),
+                  max_heart_rate = COALESCE(excluded.max_heart_rate, max_heart_rate),
                   fetched_at = excluded.fetched_at
           """)
       let fetchedAt = Int(Date().timeIntervalSince1970)
@@ -36,7 +40,8 @@ extension StorageManager {
           day.calendarDate, day.stressLevel, day.restStressSeconds, day.lowStressSeconds,
           day.mediumStressSeconds, day.highStressSeconds, day.bodyBatteryCharged,
           day.bodyBatteryDrained, day.hrvLastNight, day.hrvWeeklyAverage, day.hrvLastNightHigh,
-          day.hrvStatus, day.hrvBaselineLow, day.hrvBaselineHigh, fetchedAt,
+          day.hrvStatus, day.hrvBaselineLow, day.hrvBaselineHigh, day.restingHeartRate,
+          day.minHeartRate, day.maxHeartRate, fetchedAt,
         ])
       }
 
@@ -72,6 +77,9 @@ extension StorageManager {
         day.hrvStatus = row["hrv_status"]
         day.hrvBaselineLow = row["hrv_baseline_low"]
         day.hrvBaselineHigh = row["hrv_baseline_high"]
+        day.restingHeartRate = row["resting_heart_rate"]
+        day.minHeartRate = row["min_heart_rate"]
+        day.maxHeartRate = row["max_heart_rate"]
         return day
       }
     } ?? nil

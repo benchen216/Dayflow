@@ -717,6 +717,9 @@ final class StorageManager: StorageManaging, @unchecked Sendable {
                   hrv_status TEXT,
                   hrv_baseline_low INTEGER,
                   hrv_baseline_high INTEGER,
+                  resting_heart_rate INTEGER,
+                  min_heart_rate INTEGER,
+                  max_heart_rate INTEGER,
                   fetched_at INTEGER NOT NULL
               );
 
@@ -727,6 +730,13 @@ final class StorageManager: StorageManaging, @unchecked Sendable {
                   PRIMARY KEY(kind, ts)
               );
           """)
+
+      // Migration: heart rate columns came after the first Garmin release
+      let garminDayColumns = try db.columns(in: "garmin_days").map { $0.name }
+      for column in ["resting_heart_rate", "min_heart_rate", "max_heart_rate"]
+      where !garminDayColumns.contains(column) {
+        try db.execute(sql: "ALTER TABLE garmin_days ADD COLUMN \(column) INTEGER")
+      }
 
       // Migration: Add soft delete column to timeline_cards if it doesn't exist
       let timelineCardsColumns = try db.columns(in: "timeline_cards").map { $0.name }

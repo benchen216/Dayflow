@@ -3,13 +3,14 @@
 //  Dayflow
 //
 //  What Dayflow keeps from the Garmin Connect Personal API: one row per day (stress, Body
-//  Battery, last night's HRV) and timestamped samples (Body Battery levels, HRV readings taken
-//  during sleep). Decoding is kept apart from the network so it can be tested with saved
-//  responses.
+//  Battery, last night's HRV, resting/min/max heart rate) and timestamped samples (Body Battery
+//  levels, HRV readings taken during sleep, heart rate through the day). Decoding is kept apart
+//  from the network so it can be tested with saved responses.
 //
 //  Garmin's daily Body Battery report only carries a handful of points per day (around the
 //  moments the level changed direction), so the "curve" is coarse. HRV readings come every
-//  five minutes, but only while asleep.
+//  five minutes, but only while asleep. Heart rate is the only all-day series, a point every
+//  few minutes while the watch is worn.
 //
 
 import Foundation
@@ -31,6 +32,9 @@ struct GarminDay: Equatable, Sendable {
   var hrvStatus: String?
   var hrvBaselineLow: Int?
   var hrvBaselineHigh: Int?
+  var restingHeartRate: Int?
+  var minHeartRate: Int?
+  var maxHeartRate: Int?
 
   init(calendarDate: String) {
     self.calendarDate = calendarDate
@@ -38,7 +42,7 @@ struct GarminDay: Equatable, Sendable {
 
   var hasData: Bool {
     stressLevel != nil || bodyBatteryCharged != nil || bodyBatteryDrained != nil
-      || hrvLastNight != nil
+      || hrvLastNight != nil || restingHeartRate != nil || maxHeartRate != nil
   }
 }
 
@@ -46,6 +50,7 @@ struct GarminSample: Equatable, Sendable {
   enum Kind: String, Sendable, CaseIterable {
     case bodyBattery = "body_battery"
     case hrv
+    case heartRate = "heart_rate"
   }
 
   let kind: Kind
@@ -131,6 +136,36 @@ enum GarminDecoding {
     }
   }
 
+  /// `/wellness-service/wellness/dailyHeartRate?date=`: the day's resting, lowest and highest
+  /// heart rate, plus `heartRateValues` read in the column order the descriptors give. Points
+  /// without a rate are gaps (watch off the wrist) and are skipped.
+  static func heartRate(from data: Data) throws -> (day: GarminDay?, samples: [GarminSample]) {
+    guard let body = try json(data) as? [String: Any],
+      let date = body["calendarDate"] as? String
+    else { return (nil, []) }
+    var day = GarminDay(calendarDate: date)
+    day.restingHeartRate = int(body["restingHeartRate"])
+    day.minHeartRate = int(body["minHeartRate"])
+    day.maxHeartRate = int(body["maxHeartRate"])
+
+    let descriptors = body["heartRateValueDescriptors"] as? [[String: Any]] ?? []
+    func column(_ key: String) -> Int? {
+      descriptors.first { $0["key"] as? String == key }.flatMap { int($0["index"]) }
+    }
+    guard let timeColumn = column("timestamp"), let rateColumn = column("heartrate"),
+      let values = body["heartRateValues"] as? [[Any]]
+    else { return (day, []) }
+
+    let samples = values.compactMap { point -> GarminSample? in
+      guard point.count > max(timeColumn, rateColumn),
+        let millis = double(point[timeColumn]), let rate = int(point[rateColumn])
+      else { return nil }
+      return GarminSample(
+        kind: .heartRate, timestamp: Date(timeIntervalSince1970: millis / 1000), value: rate)
+    }
+    return (day, samples)
+  }
+
   private static func hrvDay(_ summary: [String: Any]) -> GarminDay? {
     guard let date = summary["calendarDate"] as? String else { return nil }
     var day = GarminDay(calendarDate: date)
@@ -168,6 +203,9 @@ enum GarminDecoding {
       merged.hrvStatus = merged.hrvStatus ?? day.hrvStatus
       merged.hrvBaselineLow = merged.hrvBaselineLow ?? day.hrvBaselineLow
       merged.hrvBaselineHigh = merged.hrvBaselineHigh ?? day.hrvBaselineHigh
+      merged.restingHeartRate = merged.restingHeartRate ?? day.restingHeartRate
+      merged.minHeartRate = merged.minHeartRate ?? day.minHeartRate
+      merged.maxHeartRate = merged.maxHeartRate ?? day.maxHeartRate
       byDate[day.calendarDate] = merged
     }
     return order.compactMap { byDate[$0] }
