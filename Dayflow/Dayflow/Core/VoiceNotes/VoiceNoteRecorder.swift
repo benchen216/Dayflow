@@ -170,6 +170,10 @@ final class VoiceNoteRecorder: ObservableObject {
         usesModelVoiceEmotion = true
         connect(transcriber)
         return transcriber
+      } catch SenseVoiceError.notDownloaded {
+        transcriptionNotice = String(
+          localized: "voiceNotes.notice.senseVoiceNotDownloaded",
+          defaultValue: "The SenseVoice model hasn't been downloaded, so Apple speech recognition is used instead. Download it from the engine picker in Voice notes.")
       } catch {
         print("[VoiceNotes] SenseVoice unavailable, using Apple speech recognition: \(error)")
         transcriptionNotice = String(

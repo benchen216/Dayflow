@@ -1,4 +1,5 @@
 import AVFoundation
+import FluidAudio
 import XCTest
 
 @testable import Dayflow
@@ -46,16 +47,56 @@ final class SenseVoiceTests: XCTestCase {
     XCTAssertFalse(SenseVoiceOutput.usesTraditionalChinese(Locale(identifier: "en-US")))
   }
 
-  func testMissingFilesAreReported() {
-    let empty = SenseVoiceRuntime.Files(
-      modelsDirectory: FileManager.default.temporaryDirectory
-        .appendingPathComponent("no-models-\(UUID().uuidString)"))
-    XCTAssertFalse(SenseVoiceRuntime.isInstalled(empty))
-    XCTAssertThrowsError(try SenseVoiceRuntime(files: empty)) { error in
-      guard case SenseVoiceError.missingFile = error else {
-        return XCTFail("Expected missingFile, got \(error)")
-      }
+  func testVoiceEmotionAddsUpTagsWithTheSameLabel() throws {
+    let scores = [
+      SenseVoiceTagScore(tag: "ANGRY", probability: 0.4),
+      SenseVoiceTagScore(tag: "NEUTRAL", probability: 0.35),
+      SenseVoiceTagScore(tag: "FEARFUL", probability: 0.15),
+      SenseVoiceTagScore(tag: "DISGUSTED", probability: 0.1),
+    ]
+    let emotion = try XCTUnwrap(SenseVoiceOutput.voiceEmotion(from: scores))
+    XCTAssertEqual(emotion.label, .tense)
+    XCTAssertEqual(emotion.confidence, 0.65, accuracy: 1e-5)
+  }
+
+  func testVoiceEmotionUsesTheMostLikelyTagEvenWhenUnsorted() throws {
+    let scores = [
+      SenseVoiceTagScore(tag: "NEUTRAL", probability: 0.25),
+      SenseVoiceTagScore(tag: "SAD", probability: 0.7),
+      SenseVoiceTagScore(tag: "HAPPY", probability: 0.05),
+    ]
+    let emotion = try XCTUnwrap(SenseVoiceOutput.voiceEmotion(from: scores))
+    XCTAssertEqual(emotion.label, .low)
+    XCTAssertEqual(emotion.confidence, 0.7, accuracy: 1e-5)
+  }
+
+  func testVoiceEmotionIsSkippedWhenTheModelIsUnsure() {
+    XCTAssertNil(SenseVoiceOutput.voiceEmotion(from: []))
+    XCTAssertNil(
+      SenseVoiceOutput.voiceEmotion(from: [
+        SenseVoiceTagScore(tag: "EMO_UNKNOWN", probability: 0.6),
+        SenseVoiceTagScore(tag: "HAPPY", probability: 0.4),
+      ]))
+  }
+
+  func testLanguageIndicesMatchTheModel() {
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "auto"), 0)
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "zh"), 3)
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "en"), 4)
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "yue"), 7)
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "ja"), 11)
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "ko"), 12)
+    XCTAssertEqual(SenseVoiceOutput.languageIndex(for: "de"), 0)
+  }
+
+  func testMissingModelIsReportedWithoutDownloading() {
+    let empty = FileManager.default.temporaryDirectory
+      .appendingPathComponent("no-models-\(UUID().uuidString)")
+    XCTAssertFalse(SenseVoiceRuntime.Model.isInstalled(at: empty))
+    XCTAssertThrowsError(try SenseVoiceRuntime(language: "zh", directory: empty)) { error in
+      XCTAssertEqual(error as? SenseVoiceError, .notDownloaded)
     }
+    XCTAssertFalse(FileManager.default.fileExists(atPath: empty.path))
   }
 
   // MARK: - With the real model (skipped when the model files aren't on this Mac)
@@ -66,7 +107,7 @@ final class SenseVoiceTests: XCTestCase {
   )
 
   private func requireModel() throws {
-    try XCTSkipUnless(SenseVoiceRuntime.isInstalled(), "SenseVoice files aren't installed")
+    try XCTSkipUnless(SenseVoiceRuntime.Model.isInstalled(), "The SenseVoice model isn't downloaded")
   }
 
   private func samples(named name: String) throws -> [Float] {
@@ -81,14 +122,18 @@ final class SenseVoiceTests: XCTestCase {
     return Array(UnsafeBufferPointer(start: buffer.floatChannelData![0], count: Int(buffer.frameLength)))
   }
 
-  func testRecognizesEnglishAndChineseWithTheRealModel() throws {
+  func testRecognizesEnglishAndChineseWithTheRealModel() async throws {
     try requireModel()
-    let english = try SenseVoiceRuntime(language: "en").recognize(samples: samples(named: "en.wav"))
-    XCTAssertTrue(
-      english?.text.lowercased().contains("tribal") == true, "English: \(english?.text ?? "nil")")
+    let english = try await SenseVoiceRuntime(language: "en")
+      .recognize(samples: samples(named: "en.wav"))
+    XCTAssertTrue(english.text.lowercased().contains("tribal"), "English: \(english.text)")
 
-    let chinese = try SenseVoiceRuntime(language: "zh").recognize(samples: samples(named: "zh.wav"))
-    XCTAssertTrue(chinese?.text.contains("9点") == true, "Chinese: \(chinese?.text ?? "nil")")
+    // "9点" rather than "九点" shows the language and text-norm indices reach the model.
+    let chinese = try await SenseVoiceRuntime(language: "zh")
+      .recognize(samples: samples(named: "zh.wav"))
+    XCTAssertTrue(chinese.text.contains("9点"), "Chinese: \(chinese.text)")
+    let probabilities = chinese.emotionScores.map { Double($0.probability) }
+    XCTAssertEqual(probabilities.reduce(0, +), 1, accuracy: 1e-3)
   }
 
   func testTranscriberEmitsASegmentAfterAPause() async throws {

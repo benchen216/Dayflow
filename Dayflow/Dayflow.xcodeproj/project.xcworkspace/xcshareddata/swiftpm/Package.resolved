@@ -1,6 +1,15 @@
 {
-  "originHash" : "7b7986828cb6f86133ec5e83bfa436e4e809f7282beff481deb6d9be7e6c3dd9",
+  "originHash" : "c76134de3691769ded99bbc89643554a93f2a1de173ac4b0c60a2bc25bf615a2",
   "pins" : [
+    {
+      "identity" : "fluidaudio",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/benchen216/FluidAudio",
+      "state" : {
+        "branch" : "dayflow",
+        "revision" : "0e6206d12d4e1ce16744508e0ce13dac00d22346"
+      }
+    },
     {
       "identity" : "grdb.swift",
       "kind" : "remoteSourceControl",

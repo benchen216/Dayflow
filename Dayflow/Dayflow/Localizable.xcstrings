@@ -2852,6 +2852,318 @@
         }
       }
     },
+    "voiceNotes.notice.senseVoiceNotDownloaded" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Das SenseVoice-Modell wurde noch nicht geladen, daher wird die Apple-Spracherkennung verwendet. Lade es in den Sprachnotizen über die Auswahl der Spracherkennung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The SenseVoice model hasn't been downloaded, so Apple speech recognition is used instead. Download it from the engine picker in Voice notes."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Le modèle SenseVoice n'a pas été téléchargé, la reconnaissance vocale d'Apple est donc utilisée. Téléchargez-le depuis le choix du moteur dans Notes vocales."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice モデルがダウンロードされていないため、Apple の音声認識を使用します。ボイスメモの音声エンジンの選択からダウンロードできます。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice 모델을 다운로드하지 않아 Apple 음성 인식을 대신 사용합니다. 음성 메모의 엔진 선택에서 다운로드하세요."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Модель SenseVoice не загружена, поэтому используется распознавание речи Apple. Загрузите её в разделе голосовых заметок, где выбирается движок."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未下载 SenseVoice 模型，改用 Apple 语音识别。可在语音笔记的识别引擎选项中下载。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "尚未下載 SenseVoice 模型，改用 Apple 語音辨識。可在語音筆記的辨識引擎選項中下載。"
+          }
+        }
+      }
+    },
+    "voiceNotes.senseVoice.download" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Modell laden (ca. %lld MB)"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Download the model (about %lld MB)"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Télécharger le modèle (environ %lld Mo)"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "モデルをダウンロード（約 %lld MB）"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "모델 다운로드(약 %lld MB)"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Загрузить модель (около %lld МБ)"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下载模型（约 %lld MB）"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下載模型（約 %lld MB）"
+          }
+        }
+      }
+    },
+    "voiceNotes.senseVoice.downloading" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice-Modell wird geladen …"
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Downloading the SenseVoice model…"
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Téléchargement du modèle SenseVoice…"
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice モデルをダウンロード中…"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "SenseVoice 모델 다운로드 중…"
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Загрузка модели SenseVoice…"
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在下载 SenseVoice 模型…"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在下載 SenseVoice 模型…"
+          }
+        }
+      }
+    },
+    "voiceNotes.senseVoice.downloadFailed" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Der Download wurde nicht abgeschlossen. Prüfe deine Verbindung und versuche es erneut."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "The download didn't finish. Check your connection and try again."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Le téléchargement n'a pas abouti. Vérifiez votre connexion et réessayez."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ダウンロードが完了しませんでした。接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다운로드를 완료하지 못했습니다. 연결을 확인하고 다시 시도하세요."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Загрузка не завершилась. Проверьте подключение и повторите попытку."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下载未完成。请检查网络连接后重试。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下載未完成。請檢查網路連線後再試一次。"
+          }
+        }
+      }
+    },
+    "voiceNotes.senseVoice.notDownloadedHint" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Bis dahin verwenden Aufnahmen die Apple-Spracherkennung."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Until it's downloaded, recordings use Apple speech recognition."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "En attendant, les enregistrements utilisent la reconnaissance vocale d'Apple."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "ダウンロードが終わるまでは、Apple の音声認識で録音します。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "다운로드가 끝날 때까지 녹음에는 Apple 음성 인식을 사용합니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Пока модель не загружена, записи распознаются средствами Apple."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下载完成前，录音会使用 Apple 语音识别。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "下載完成前，錄音會使用 Apple 語音辨識。"
+          }
+        }
+      }
+    },
+    "voiceNotes.senseVoice.preparing" : {
+      "localizations" : {
+        "de" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Das Modell wird für diesen Mac vorbereitet. Das dauert einmalig ein bis zwei Minuten."
+          }
+        },
+        "en" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Preparing the model for this Mac. This takes a minute or two, once."
+          }
+        },
+        "fr" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Préparation du modèle pour ce Mac. Cela prend une ou deux minutes, une seule fois."
+          }
+        },
+        "ja" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "この Mac 用にモデルを準備しています。初回のみ 1〜2 分かかります。"
+          }
+        },
+        "ko" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "이 Mac에 맞게 모델을 준비하는 중입니다. 처음 한 번만 1~2분 걸립니다."
+          }
+        },
+        "ru" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "Модель готовится для этого Mac. Это займёт минуту-две, только один раз."
+          }
+        },
+        "zh-Hans" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在为这台 Mac 准备模型，仅第一次需要一两分钟。"
+          }
+        },
+        "zh-Hant" : {
+          "stringUnit" : {
+            "state" : "needs_review",
+            "value" : "正在為這台 Mac 準備模型，只有第一次需要一兩分鐘。"
+          }
+        }
+      }
+    },
     "voiceNotes.language" : {
       "localizations" : {
         "de" : {
