@@ -5,6 +5,7 @@ struct VoiceNotesView: View {
   @Environment(\.dayflowTheme) private var theme
   @ObservedObject private var store = VoiceNoteStore.shared
   @ObservedObject private var recorder = VoiceNoteRecorder.shared
+  @ObservedObject private var senseVoiceModel = SenseVoiceModelStore.shared
   @AppStorage(VoiceNoteRecorder.cameraPreferenceKey) private var useCamera = false
   @AppStorage(SpeechLanguage.preferenceKey) private var speechLanguage = SpeechLanguage.followApp
   @AppStorage(SpeechEngine.preferenceKey) private var speechEngine = SpeechEngine.apple.rawValue
@@ -74,7 +75,6 @@ struct VoiceNotesView: View {
     .padding(20)
   }
 
-  /// Only offered once the local model files are in place.
   private var enginePicker: some View {
     HStack(spacing: 8) {
       Text(String(localized: "voiceNotes.engine", defaultValue: "Speech engine"))
@@ -97,6 +97,64 @@ struct VoiceNotesView: View {
         defaultValue:
           "SenseVoice runs on this Mac and also hears emotion in your voice. It knows Chinese, Cantonese, English, Japanese and Korean."
       ))
+  }
+
+  /// SenseVoice needs its model on this Mac first; it's only downloaded when asked.
+  @ViewBuilder
+  private var senseVoiceModelRow: some View {
+    switch senseVoiceModel.status {
+    case .ready:
+      EmptyView()
+    case .downloading(let fraction):
+      VStack(alignment: .leading, spacing: 4) {
+        ProgressView(value: fraction).controlSize(.small)
+        Text(
+          String(
+            localized: "voiceNotes.senseVoice.downloading",
+            defaultValue: "Downloading the SenseVoice model…"))
+          .font(.custom("Figtree", size: 11))
+          .foregroundColor(theme.textSecondary)
+      }
+    case .preparing:
+      HStack(spacing: 6) {
+        ProgressView().controlSize(.mini)
+        Text(
+          String(
+            localized: "voiceNotes.senseVoice.preparing",
+            defaultValue: "Preparing the model for this Mac. This takes a minute or two, once."))
+          .font(.custom("Figtree", size: 11))
+          .foregroundColor(theme.textSecondary)
+      }
+    case .notDownloaded, .failed:
+      VStack(alignment: .leading, spacing: 6) {
+        if case .failed = senseVoiceModel.status {
+          Text(
+            String(
+              localized: "voiceNotes.senseVoice.downloadFailed",
+              defaultValue: "The download didn't finish. Check your connection and try again."))
+            .font(.custom("Figtree", size: 11))
+            .foregroundColor(theme.textSecondary)
+        }
+        Button {
+          senseVoiceModel.download()
+        } label: {
+          Label(
+            String(
+              format: String(
+                localized: "voiceNotes.senseVoice.download",
+                defaultValue: "Download the model (about %lld MB)"),
+              SenseVoiceRuntime.Model.downloadMegabytes),
+            systemImage: "arrow.down.circle")
+        }
+        .buttonStyle(VoicePillButtonStyle())
+        Text(
+          String(
+            localized: "voiceNotes.senseVoice.notDownloadedHint",
+            defaultValue: "Until it's downloaded, recordings use Apple speech recognition."))
+          .font(.custom("Figtree", size: 11))
+          .foregroundColor(theme.textSecondary)
+      }
+    }
   }
 
   private var languagePicker: some View {
@@ -160,7 +218,8 @@ struct VoiceNotesView: View {
         }
         .buttonStyle(VoicePillButtonStyle(prominent: true))
         languagePicker
-        if SenseVoiceRuntime.isInstalled() { enginePicker }
+        enginePicker
+        if speechEngine == SpeechEngine.senseVoice.rawValue { senseVoiceModelRow }
         Toggle(isOn: $useCamera) {
           Text(
             String(

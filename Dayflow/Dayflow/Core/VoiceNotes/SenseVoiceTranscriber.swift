@@ -29,8 +29,9 @@ final class SenseVoiceTranscriber: SpeechTranscribing, @unchecked Sendable {
   private let sampleRate: Double
   private let writesTraditional: Bool
   private let lock = NSLock()
-  /// Recognition is slow next to the audio thread, so it runs here, one at a time.
-  private let decodeQueue = DispatchQueue(label: "com.dayflow.sensevoice.decode", qos: .userInitiated)
+  /// The utterance being recognized. Each new one waits for the one before it, so
+  /// segments arrive in order and the audio thread never waits on the model.
+  private var pending: Task<Void, Never>?
 
   private var framesWritten = 0
   private var preRoll: [Float] = []
@@ -46,7 +47,8 @@ final class SenseVoiceTranscriber: SpeechTranscribing, @unchecked Sendable {
     writesTraditional = SenseVoiceOutput.usesTraditionalChinese(locale)
   }
 
-  /// Loads the model off the calling thread. Throws when the files are missing or won't load.
+  /// Loads the model off the calling thread. Throws `SenseVoiceError.notDownloaded` when the
+  /// model hasn't been downloaded, or Core ML's error when it won't load.
   static func make(sampleRate: Double, locale: Locale) async throws -> SenseVoiceTranscriber {
     let language = SenseVoiceOutput.languageCode(for: locale)
     let runtime = try await Task.detached(priority: .userInitiated) {
@@ -105,9 +107,10 @@ final class SenseVoiceTranscriber: SpeechTranscribing, @unchecked Sendable {
 
   /// Waits for every queued utterance to be recognized.
   func finish() async {
-    await withCheckedContinuation { continuation in
-      decodeQueue.async { continuation.resume() }
-    }
+    lock.lock()
+    let last = pending
+    lock.unlock()
+    await last?.value
   }
 
   // MARK: - Utterances
@@ -123,14 +126,19 @@ final class SenseVoiceTranscriber: SpeechTranscribing, @unchecked Sendable {
 
     let offset = Double(startFrame) / sampleRate
     let duration = Double(samples.count) / sampleRate
-    decodeQueue.async { [weak self] in
-      self?.recognize(samples, offset: offset, duration: duration)
+    let previous = pending
+    pending = Task(priority: .userInitiated) { [weak self] in
+      await previous?.value
+      await self?.recognize(samples, offset: offset, duration: duration)
     }
   }
 
-  private func recognize(_ samples: [Float], offset: TimeInterval, duration: TimeInterval) {
-    guard let result = runtime.recognize(samples: samples) else {
-      onError?("SenseVoice returned no result")
+  private func recognize(_ samples: [Float], offset: TimeInterval, duration: TimeInterval) async {
+    let result: SenseVoiceRecognition
+    do {
+      result = try await runtime.recognize(samples: samples)
+    } catch {
+      onError?("SenseVoice couldn't recognize an utterance: \(error.localizedDescription)")
       return
     }
     var text = result.text.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -139,11 +147,10 @@ final class SenseVoiceTranscriber: SpeechTranscribing, @unchecked Sendable {
     guard !text.isEmpty else { return }
 
     onSegment?(TranscriptSegment(offset: offset, duration: duration, text: text))
-    if let label = SenseVoiceOutput.emotionLabel(from: result.emotion) {
+    if let emotion = SenseVoiceOutput.voiceEmotion(from: result.emotionScores) {
       onVoiceEmotion?(
         EmotionSample(
-          offset: offset, source: .voice, label: label,
-          confidence: SenseVoiceOutput.confidence(for: label)))
+          offset: offset, source: .voice, label: emotion.label, confidence: emotion.confidence))
     }
   }
 }

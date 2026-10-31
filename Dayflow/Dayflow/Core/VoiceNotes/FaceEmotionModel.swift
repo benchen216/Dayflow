@@ -32,7 +32,9 @@ struct FaceEmotionReading: Equatable, Sendable {
 
 final class FaceEmotionModel: @unchecked Sendable {
   static var modelURL: URL {
-    SenseVoiceRuntime.Files.default.modelsDirectory
+    FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+      .appendingPathComponent(AppDataDirectory.name, isDirectory: true)
+      .appendingPathComponent("models", isDirectory: true)
       .appendingPathComponent("emotion", isDirectory: true)
       .appendingPathComponent("EmotiEffNetB0.mlmodelc", isDirectory: true)
   }

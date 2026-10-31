@@ -2,167 +2,91 @@
 //  SenseVoiceRuntime.swift
 //  Dayflow
 //
-//  Runs the SenseVoice speech model on this Mac through sherpa-onnx. It recognizes
-//  Mandarin, Cantonese, English, Japanese and Korean, and also reports the emotion it
-//  heard in each utterance.
+//  Runs the SenseVoice speech model on this Mac through FluidAudio's Core ML port, on the
+//  Neural Engine. It recognizes Mandarin, Cantonese, English, Japanese and Korean, and
+//  also reports the emotion it heard in each utterance, with a probability.
 //
-//  The sherpa-onnx library is loaded with dlopen from the models folder instead of
-//  being linked, so the app builds and runs without it and the feature simply stays
-//  off until the files are there:
-//
-//    ~/Library/Application Support/DayflowPlus/models/
-//      lib/libsherpa-onnx-c-api.dylib, libonnxruntime.dylib
-//      sensevoice/model.int8.onnx, tokens.txt
-//
-//  `recognize` must be called from one thread at a time.
+//  The model is downloaded once from Hugging Face into FluidAudio's cache when the user
+//  asks for it in Voice notes (about 230 MB on Apple Silicon). Starting a recording never
+//  downloads it; without the model, Voice notes falls back to Apple speech recognition.
 //
 
+import FluidAudio
 import Foundation
 
-final class SenseVoiceRuntime: @unchecked Sendable {
-  struct Files {
-    var modelsDirectory: URL
+struct SenseVoiceRecognition: Equatable, Sendable {
+  let text: String
+  /// Every emotion tag with its probability, most likely first.
+  let emotionScores: [SenseVoiceTagScore]
+}
 
-    var libraryDirectory: URL { modelsDirectory.appendingPathComponent("lib", isDirectory: true) }
-    var cAPILibrary: URL { libraryDirectory.appendingPathComponent("libsherpa-onnx-c-api.dylib") }
-    var onnxRuntimeLibrary: URL { libraryDirectory.appendingPathComponent("libonnxruntime.dylib") }
-    var model: URL {
-      modelsDirectory.appendingPathComponent("sensevoice", isDirectory: true)
-        .appendingPathComponent("model.int8.onnx")
-    }
-    var tokens: URL {
-      modelsDirectory.appendingPathComponent("sensevoice", isDirectory: true)
-        .appendingPathComponent("tokens.txt")
-    }
-
-    /// Models stay in Application Support even when media is stored elsewhere.
-    static var `default`: Files {
-      Files(
-        modelsDirectory: FileManager.default
-          .urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
-          .appendingPathComponent(AppDataDirectory.name, isDirectory: true)
-          .appendingPathComponent("models", isDirectory: true))
+final class SenseVoiceRuntime: Sendable {
+  enum Model {
+    /// int8 runs on the Neural Engine at half the size of fp16 with the same accuracy.
+    /// Intel Macs have no Neural Engine, so they get the much larger fp32 model.
+    static var precision: SenseVoiceEncoderPrecision {
+      #if arch(arm64)
+        .int8
+      #else
+        .fp32
+      #endif
     }
 
-    var missing: [URL] {
-      [cAPILibrary, onnxRuntimeLibrary, model, tokens].filter {
-        !FileManager.default.fileExists(atPath: $0.path)
+    static var downloadMegabytes: Int {
+      #if arch(arm64)
+        230
+      #else
+        900
+      #endif
+    }
+
+    /// FluidAudio's cache folder for SenseVoice. FluidAudio keeps the path private, so
+    /// this mirrors it; `isInstalled` reports false if it ever moves, and the download
+    /// button shows again.
+    static var directory: URL {
+      FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
+        .appendingPathComponent("FluidAudio", isDirectory: true)
+        .appendingPathComponent("Models", isDirectory: true)
+        .appendingPathComponent("sensevoice-small", isDirectory: true)
+    }
+
+    static func isInstalled(at directory: URL = directory) -> Bool {
+      SenseVoiceModels.modelsExist(at: directory, precision: precision)
+    }
+
+    /// Downloads the model into FluidAudio's cache. `progress` gets 0...1.
+    static func download(progress: @escaping @Sendable (Double) -> Void) async throws {
+      _ = try await SenseVoiceModels.download(precision: precision) { update in
+        progress(update.fractionCompleted)
       }
     }
   }
 
-  struct Recognition: Equatable, Sendable {
-    let text: String
-    /// Raw emotion tag, for example "<|HAPPY|>". Nil when the model gave none.
-    let emotion: String?
+  private let manager: SenseVoiceManager
+
+  /// Loads the downloaded model. Throws `notDownloaded` instead of fetching it.
+  init(language: String, directory: URL = Model.directory) throws {
+    guard Model.isInstalled(at: directory) else { throw SenseVoiceError.notDownloaded }
+    let models = try SenseVoiceModels.load(from: directory, precision: Model.precision)
+    manager = SenseVoiceManager(
+      models: models,
+      language: SenseVoiceOutput.languageIndex(for: language),
+      textNorm: SenseVoiceOutput.withInverseTextNormalization)
   }
 
-  static func isInstalled(_ files: Files = .default) -> Bool { files.missing.isEmpty }
-
-  // C signatures from sherpa-onnx's c-api.h.
-  private typealias CreateRecognizer =
-    @convention(c) (UnsafePointer<SherpaOnnxOfflineRecognizerConfig>?) -> OpaquePointer?
-  private typealias DestroyRecognizer = @convention(c) (OpaquePointer?) -> Void
-  private typealias CreateStream = @convention(c) (OpaquePointer?) -> OpaquePointer?
-  private typealias DestroyStream = @convention(c) (OpaquePointer?) -> Void
-  private typealias AcceptWaveform =
-    @convention(c) (OpaquePointer?, Int32, UnsafePointer<Float>?, Int32) -> Void
-  private typealias Decode = @convention(c) (OpaquePointer?, OpaquePointer?) -> Void
-  private typealias GetResult =
-    @convention(c) (OpaquePointer?) -> UnsafePointer<SherpaOnnxOfflineRecognizerResult>?
-  private typealias DestroyResult =
-    @convention(c) (UnsafePointer<SherpaOnnxOfflineRecognizerResult>?) -> Void
-
-  private let recognizer: OpaquePointer
-  private let destroyRecognizer: DestroyRecognizer
-  private let createStream: CreateStream
-  private let destroyStream: DestroyStream
-  private let acceptWaveform: AcceptWaveform
-  private let decode: Decode
-  private let getResult: GetResult
-  private let destroyResult: DestroyResult
-
-  /// `language` is one of auto, zh, en, ja, ko, yue.
-  init(files: Files = .default, language: String = "auto", threads: Int32 = 2) throws {
-    if let first = files.missing.first { throw SenseVoiceError.missingFile(first.lastPathComponent) }
-
-    // The C API library finds onnxruntime next to itself, so load that one first.
-    guard dlopen(files.onnxRuntimeLibrary.path, RTLD_NOW | RTLD_LOCAL) != nil,
-      let handle = dlopen(files.cAPILibrary.path, RTLD_NOW | RTLD_LOCAL)
-    else {
-      throw SenseVoiceError.cannotLoadLibrary(dlerror().map { String(cString: $0) } ?? "unknown error")
-    }
-
-    func symbol<T>(_ name: String, as type: T.Type) throws -> T {
-      guard let pointer = dlsym(handle, name) else { throw SenseVoiceError.missingSymbol(name) }
-      return unsafeBitCast(pointer, to: T.self)
-    }
-    let create = try symbol("SherpaOnnxCreateOfflineRecognizer", as: CreateRecognizer.self)
-    destroyRecognizer = try symbol("SherpaOnnxDestroyOfflineRecognizer", as: DestroyRecognizer.self)
-    createStream = try symbol("SherpaOnnxCreateOfflineStream", as: CreateStream.self)
-    destroyStream = try symbol("SherpaOnnxDestroyOfflineStream", as: DestroyStream.self)
-    acceptWaveform = try symbol("SherpaOnnxAcceptWaveformOffline", as: AcceptWaveform.self)
-    decode = try symbol("SherpaOnnxDecodeOfflineStream", as: Decode.self)
-    getResult = try symbol("SherpaOnnxGetOfflineStreamResult", as: GetResult.self)
-    destroyResult = try symbol("SherpaOnnxDestroyOfflineRecognizerResult", as: DestroyResult.self)
-
-    // The config holds C string pointers, so keep copies alive until it's been used.
-    var owned: [UnsafeMutablePointer<CChar>] = []
-    func cString(_ value: String) -> UnsafePointer<CChar> {
-      let copy = strdup(value)!
-      owned.append(copy)
-      return UnsafePointer(copy)
-    }
-    defer { owned.forEach { free($0) } }
-
-    var config = SherpaOnnxOfflineRecognizerConfig()
-    config.feat_config.sample_rate = 16_000
-    config.feat_config.feature_dim = 80
-    config.model_config.sense_voice.model = cString(files.model.path)
-    config.model_config.sense_voice.language = cString(language)
-    config.model_config.sense_voice.use_itn = 1
-    config.model_config.tokens = cString(files.tokens.path)
-    config.model_config.num_threads = threads
-    config.model_config.provider = cString("cpu")
-    config.decoding_method = cString("greedy_search")
-
-    guard let recognizer = create(&config) else { throw SenseVoiceError.cannotCreateRecognizer }
-    self.recognizer = recognizer
-  }
-
-  deinit {
-    destroyRecognizer(recognizer)
-  }
-
-  /// Recognizes one utterance of 16 kHz mono samples.
-  func recognize(samples: [Float], sampleRate: Int32 = 16_000) -> Recognition? {
-    guard !samples.isEmpty, let stream = createStream(recognizer) else { return nil }
-    defer { destroyStream(stream) }
-    samples.withUnsafeBufferPointer { buffer in
-      acceptWaveform(stream, sampleRate, buffer.baseAddress, Int32(buffer.count))
-    }
-    decode(recognizer, stream)
-    guard let result = getResult(stream) else { return nil }
-    defer { destroyResult(result) }
-
-    let text = result.pointee.text.map { String(cString: $0) } ?? ""
-    let emotion = result.pointee.emotion.map { String(cString: $0) }
-    return Recognition(text: text, emotion: emotion?.isEmpty == true ? nil : emotion)
+  /// Recognizes one utterance of 16 kHz mono samples (up to 30 seconds).
+  func recognize(samples: [Float]) async throws -> SenseVoiceRecognition {
+    let result = try await manager.transcribeDetailed(audio: samples)
+    return SenseVoiceRecognition(text: result.text, emotionScores: result.scores.emotion)
   }
 }
 
-enum SenseVoiceError: LocalizedError {
-  case missingFile(String)
-  case cannotLoadLibrary(String)
-  case missingSymbol(String)
-  case cannotCreateRecognizer
+enum SenseVoiceError: LocalizedError, Equatable {
+  case notDownloaded
 
   var errorDescription: String? {
     switch self {
-    case .missingFile(let name): return "SenseVoice file not found: \(name)"
-    case .cannotLoadLibrary(let reason): return "Couldn't load the sherpa-onnx library: \(reason)"
-    case .missingSymbol(let name): return "The sherpa-onnx library has no \(name)"
-    case .cannotCreateRecognizer: return "SenseVoice couldn't start. Check the model files."
+    case .notDownloaded: return "The SenseVoice model hasn't been downloaded yet."
     }
   }
 }
@@ -184,9 +108,36 @@ enum SenseVoiceOutput {
     }
   }
 
-  /// SenseVoice has no confidence score, so a non-neutral label gets a fixed, modest one.
-  static func confidence(for label: EmotionLabel) -> Double {
-    label == .neutral ? 0.5 : 0.7
+  /// The emotion heard in an utterance. The label comes from the most likely tag; its
+  /// confidence adds up every tag that maps to the same label (ANGRY, FEARFUL and
+  /// DISGUSTED all count toward tense). Nil when the most likely tag has no label.
+  static func voiceEmotion(from scores: [SenseVoiceTagScore]) -> (
+    label: EmotionLabel, confidence: Double
+  )? {
+    guard let top = scores.max(by: { $0.probability < $1.probability }),
+      let label = emotionLabel(from: top.tag)
+    else { return nil }
+    let confidence = scores
+      .filter { emotionLabel(from: $0.tag) == label }
+      .reduce(0) { $0 + Double($1.probability) }
+    return (label, min(confidence, 1))
+  }
+
+  /// SenseVoice's text-norm query token: 14 asks for written-out numbers and punctuation
+  /// ("9點" rather than "九點"), 15 for spoken form.
+  static let withInverseTextNormalization: Int32 = 14
+
+  /// The model's language query token for a SenseVoice language code (FunASR's
+  /// `lid_dict`). Anything else lets the model detect the language.
+  static func languageIndex(for code: String) -> Int32 {
+    switch code {
+    case "zh": return 3
+    case "en": return 4
+    case "yue": return 7
+    case "ja": return 11
+    case "ko": return 12
+    default: return 0
+    }
   }
 
   /// SenseVoice writes Chinese in Simplified characters.
